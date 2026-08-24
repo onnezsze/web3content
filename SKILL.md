@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区），JSON结构化输出（异动预计算、交叉验证、情绪词频、昨日热点存档、健康检查），10段式日报模板服务内容运营与KOL创作。"
-version: 5.0.0
+version: 6.0.0
 author: Lucas + Hermes Agent
 license: MIT
 platforms: [linux, macos]
@@ -12,7 +12,7 @@ metadata:
 
 # Web3 行情热点采集与分析
 
-多源采集 Web3 市场数据，四层架构输出 JSON 结构化结果，10 段式日报模板。服务两类用户：
+多源采集 Web3 市场数据，四层架构输出 JSON 结构化结果，11 段式日报模板（含站外创作者速用包），配 charts.py 自动生成数据卡片图。服务两类用户：
 - **机构内容运营**：交易所/平台内容团队
 - **币圈 KOL/内容创作者**：独立博主、主播、短视频创作者
 
@@ -29,8 +29,9 @@ metadata:
 ### 采集数据
 
 ```bash
-python3 scripts/collect.py --json-only   # stdout=JSON（AI 推荐）
-python3 scripts/collect.py               # stdout=JSON + stderr=人类可读
+python3 scripts/report.py                # 【推荐 AI/cron/tg_bot 入口】精简结构化文本，避免大 JSON 截断
+python3 scripts/charts.py                # 【配图生成】涨幅榜/跌幅榜/情绪词频 → PNG，输出 MEDIA: 路径供直接发送
+python3 scripts/collect.py --json-only   # stdout=完整 JSON（仅当需要原始字段时）
 python3 scripts/collect.py --preflight   # 健康检查（5s）
 ```
 
@@ -75,7 +76,7 @@ python3 scripts/collect.py --preflight   # 健康检查（5s）
 ### 健康检查层
 preflight.py 并发 ping 12 源，输出 ok/failed + 延迟 ms。
 
-## 日报模板（10段，固定结构）
+## 日报模板（11段，固定结构）
 
 ```
 【Web3行情热点日报｜M月D日】
@@ -92,9 +93,10 @@ preflight.py 并发 ping 12 源，输出 ok/failed + 延迟 ms。
    / 具体标的及可交易性 / 看多·看空论据各带数据 / 数据佐证
    / 内容切入点+所需素材 / 卡片三要素(标的·节点·用户)
 
-五、异动资产榜｜币种·涨跌幅·量比·触发事件·所处阶段(启动·加速·冲高回落)
+五、异动资产榜｜币种·涨跌幅·触发事件·所处阶段(启动·加速·冲高回落)
 
 六、未来3天节点日历｜宏观数据·解锁·上线（待确认标注）
+   prompt 必须内置宏观日历（如 FOMC 9/15-16、10/27-28、12/8-9；CPI 月中；非农每月首周五），否则 AI 全写"待确认"
 
 七、内容排期｜T+0轻内容(图文/推文/切片/快评) / T+3重内容(深度/圆桌/数据可视化)
    每档标注素材完备度
@@ -104,7 +106,21 @@ preflight.py 并发 ping 12 源，输出 ok/failed + 延迟 ms。
 九、待核实信息区｜未交叉验证传闻隔离（标"未确认"）
 
 十、合规红线清单｜固定附上
+
+十一、创作者速用包｜站外可直接发（v6 新增，服务小红书/抖音/X/视频号博主）
+   成品1 小红书图文：封面大字(≤12字钩子，猎奇/反常识/冲突优先)+标题+正文(150-250字
+      短促口语化、指名道姓+数据+冲突观点、禁"扣1"式引导)+标签8-10个+发布时段
+   成品2 X推文：观点型≤280字符，带数据+冲突观点
+   成品3 短视频口播：前3秒钩子+30秒口播要点(带具体数字)+画面提示
+   平台合规自查（必做）：点名具体币+操作指导倾向(低吸/追高/加仓/抄底)会被小红书判
+      高风险删帖 → 改写为"纯行业观察+个人口吻+免责声明"版本
+   【配图附件】charts.py 生成的 MEDIA: 路径（gainers/losers/sentiment.png）
 ```
+
+### charts.py 配图生成（v6 新增）
+- 输出：`charts/YYYYMMDD/gainers.png`（24h涨幅榜Top10）、`losers.png`（跌幅榜）、`sentiment.png`（情绪词频）
+- 中文渲染依赖系统 CJK 字体（Ubuntu 文泉驿正黑），matplotlib findfont 的 weight 警告可忽略
+- 颜色约定：红涨绿跌（中文用户习惯），改 charts.py 顶部 COLOR_UP/COLOR_DOWN 可切币圈绿涨红跌
 
 ### 热点评分模型（分项可复用可对比）
 - 社媒声量 0-2.5 / 成交量变化 0-2.5 / 价格波动 0-2.5 / 媒体覆盖 0-2.5 = 满分10
