@@ -18,7 +18,9 @@ from sources.market import fetch_market_chain
 from sources.news import fetch_news_chain
 from sources.social import fetch_social_chain
 from sources.macro import fetch_macro_chain
+from sources.funding import FundingRates, count_sentiment
 import preprocess
+import hot_history
 
 DEBUG = True
 
@@ -38,13 +40,15 @@ def run_all():
         f_news = ex.submit(fetch_news_chain)
         f_social = ex.submit(fetch_social_chain)
         f_macro = ex.submit(fetch_macro_chain)
+        f_funding = ex.submit(FundingRates().fetch)
 
         try:
-            market_r, news_r, social_r, macro_r = (
+            market_r, news_r, social_r, macro_r, funding_r = (
                 f_market.result(timeout=20),
                 f_news.result(timeout=20),
                 f_social.result(timeout=20),
                 f_macro.result(timeout=20),
+                f_funding.result(timeout=20),
             )
         except concurrent.futures.TimeoutError:
             log("!! 20s timeout, using partial results")
@@ -52,6 +56,7 @@ def run_all():
             news_r = {"status": "timeout", "data": []}
             social_r = {"status": "timeout", "data": []}
             macro_r = {"status": "timeout", "data": []}
+            funding_r = {"status": "timeout", "data": {}}
 
     # social 链返回 (result, per-source status) 或直接 result
     if isinstance(social_r, tuple):
@@ -64,21 +69,29 @@ def run_all():
     log(f"news: {news_r['status']} ({len(news_r.get('data', []))} items)")
     log(f"social: {social_result['status']} ({len(social_result.get('data', []))} items)")
     log(f"macro: {macro_r['status']} ({len(macro_r.get('data', []))} items)")
+    log(f"funding: {funding_r['status']}")
 
-    return market_r, news_r, social_result, macro_r, social_status
+    return market_r, news_r, social_result, macro_r, social_status, funding_r
 
 
-def build_output(market_r, news_r, social_r, macro_r, social_status):
+def build_output(market_r, news_r, social_r, macro_r, social_status, funding_r):
     market = market_r.get("data", {})
     news_items = news_r.get("data", [])
     social_items = social_r.get("data", [])
     macro_items = macro_r.get("data", [])
+    funding = funding_r.get("data", {})
 
     # 预处理
     news_clean, news_archived = preprocess.filter_and_dedup(news_items)
     social_clean, social_archived = preprocess.filter_and_dedup(social_items)
     macro_clean, macro_archived = preprocess.filter_and_dedup(macro_items)
     anomalies = preprocess.precompute_anomalies(market)
+
+    # 情绪词频（基于社媒原文）
+    sentiment = count_sentiment(social_items)
+
+    # 昨日热点存档
+    yesterday = hot_history.get_yesterday_top3()
 
     source_health = {
         "market": market_r["status"],
@@ -103,6 +116,9 @@ def build_output(market_r, news_r, social_r, macro_r, social_status):
         "source_health": source_health,
         "market": market,
         "precomputed": anomalies,
+        "funding": funding,
+        "sentiment": sentiment,
+        "yesterday_top3": yesterday,
         "news": news_clean,
         "news_archive": news_archived,
         "social": social_clean,
@@ -130,8 +146,8 @@ def main():
         return
 
     t0 = time.time()
-    market_r, news_r, social_r, macro_r, social_status = run_all()
-    out = build_output(market_r, news_r, social_r, macro_r, social_status)
+    market_r, news_r, social_r, macro_r, social_status, funding_r = run_all()
+    out = build_output(market_r, news_r, social_r, macro_r, social_status, funding_r)
 
     if not args.json_only:
         # stderr 人类可读摘要
