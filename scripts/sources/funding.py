@@ -46,16 +46,20 @@ SENTIMENT_WORDS = {
 
 
 def count_sentiment(items):
-    """统计社媒文本情绪词频"""
+    """统计社媒文本情绪词频（按平台归类，去重）"""
     counts = {k: 0 for k in SENTIMENT_WORDS}
     samples = {k: [] for k in SENTIMENT_WORDS}
+    seen_text = set()
     for it in items:
-        text = (it.get("title") or it.get("text") or "").lower()
+        text = (it.get("title") or it.get("text") or "").strip()
+        low = text.lower()
+        channel = it.get("channel") or it.get("src") or "unknown"
         for cat, words in SENTIMENT_WORDS.items():
             for w in words:
-                if w in text:
+                if w in low:
                     counts[cat] += 1
-                    if len(samples[cat]) < 3:
-                        samples[cat].append((it.get("title") or it.get("text") or "")[:80])
+                    if text[:60] not in seen_text and len(samples[cat]) < 3:
+                        seen_text.add(text[:60])
+                        samples[cat].append({"text": text[:80], "channel": channel})
                     break
     return {"counts": counts, "samples": samples}
