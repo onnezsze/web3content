@@ -117,3 +117,7 @@ JS 渲染，走 jina 代理 `https://r.jina.ai/https://www.laohu8.com/community`
 ## 配置清单
 
 无需任何 API key 或环境变量，开箱即用。
+
+## 部署分发
+
+- 公司 AI 平台导入（ZIP 根目录含 SKILL.md）、GitHub 推送、Codex marketplace 部署：见 `references/deployment.md`（含 Codex manifest 格式、GitHub token 推送、X API 现状、可用 Telegram 频道清单）。

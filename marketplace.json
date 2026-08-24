@@ -1,12 +1,20 @@
 {
+  "name": "web3-marketplace",
+  "interface": {
+    "displayName": "Web3 Market Hotspot"
+  },
   "plugins": [
     {
+      "name": "web3-market-hotspot",
       "source": {
-        "path": "./web3-market-hotspot"
+        "source": "local",
+        "path": "./plugins/web3-market-hotspot"
       },
-      "interface": {
-        "displayName": "Web3 Market Hotspot"
-      }
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
     }
   ]
 }
