@@ -1,0 +1,12 @@
+{
+  "plugins": [
+    {
+      "source": {
+        "path": "./web3-market-hotspot"
+      },
+      "interface": {
+        "displayName": "Web3 Market Hotspot"
+      }
+    }
+  ]
+}

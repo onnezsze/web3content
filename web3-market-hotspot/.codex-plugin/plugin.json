@@ -1,0 +1,6 @@
+{
+  "name": "web3-market-hotspot",
+  "version": "2.0.0",
+  "description": "Web3 行情热点采集与分析：多源抓取加密行情、新闻、社媒热点，输出日报/热点榜单/内容选题建议",
+  "skills": "./skills/"
+}
