@@ -1,6 +1,6 @@
 ---
 name: web3-hotspot-analysis
-description: "HTX Web3 行情热点分析机器人：多源采集（行情/新闻/币安广场/东方财富/老虎社区/Telegram）+ AI 日报生成 + Telegram bot 指令服务。"
+description: "Web3 行情热点分析机器人：多源采集（行情/新闻/币安广场/东方财富/老虎社区/Telegram）+ AI 日报生成 + Telegram bot 指令服务。"
 version: 1.0.0
 author: Lucas + Hermes Agent
 license: MIT
@@ -11,7 +11,7 @@ metadata:
     homepage: https://github.com/yourname/web3-hotspot-analysis
 ---
 
-# Web3 行情热点分析机器人（HTX Content Ops）
+# Web3 行情热点分析机器人（Content Ops）
 
 面向加密交易所内容运营团队的行情热点分析系统：自动采集多源数据，AI 结构化分析，输出可直接用于运营工作的日报、热点、直播选题和交易卡片建议。支持飞书定时推送 + Telegram bot 随叫随到。
 
