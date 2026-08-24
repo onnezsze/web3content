@@ -1,7 +1,7 @@
 {
   "name": "web3-market-hotspot",
-  "version": "2.0.0",
-  "description": "Web3 行情热点采集与分析：多源抓取加密行情、新闻、社媒热点（CoinGecko/RSS/币安广场/东方财富/老虎社区/Telegram），输出日报、热点榜单、内容选题建议和交易场景参考。",
+  "version": "3.0.0",
+  "description": "Web3 行情热点采集与分析：多源抓取加密行情、新闻、社媒热点，输出日报、KOL创作选题、推文/短视频/直播内容框架和交易场景参考。",
   "author": {
     "name": "Lucas",
     "url": "https://github.com/onnezsze"
