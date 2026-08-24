@@ -1,6 +1,35 @@
 {
   "name": "web3-market-hotspot",
   "version": "2.0.0",
-  "description": "Web3 行情热点采集与分析：多源抓取加密行情、新闻、社媒热点，输出日报/热点榜单/内容选题建议",
-  "skills": "./skills/"
+  "description": "Web3 行情热点采集与分析：多源抓取加密行情、新闻、社媒热点（CoinGecko/RSS/币安广场/东方财富/老虎社区/Telegram），输出日报、热点榜单、内容选题建议和交易场景参考。",
+  "author": {
+    "name": "Lucas",
+    "url": "https://github.com/onnezsze"
+  },
+  "homepage": "https://github.com/onnezsze/web3content",
+  "repository": "https://github.com/onnezsze/web3content",
+  "license": "MIT",
+  "keywords": [
+    "web3",
+    "crypto",
+    "market-analysis",
+    "hot-topic",
+    "news",
+    "content-ops",
+    "bitcoin",
+    "ethereum",
+    "telegram",
+    "rss"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Web3 Market Hotspot",
+    "shortDescription": "Web3 行情热点采集与分析",
+    "longDescription": "多源采集 Web3 市场数据（行情/新闻/社媒/传统金融联动），AI 结构化分析，输出日报、热点榜单、内容选题建议和交易场景参考。纯 Python 标准库，无需 API key。",
+    "developerName": "Lucas",
+    "category": "Productivity",
+    "capabilities": [
+      "Read"
+    ]
+  }
 }
