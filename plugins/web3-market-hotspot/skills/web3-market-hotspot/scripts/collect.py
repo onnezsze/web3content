@@ -1,203 +1,155 @@
 #!/usr/bin/env python3
-"""HTX Web3 行情热点数据采集器 v2 - 行情 + 新闻RSS + Telegram社媒"""
-import urllib.request, json, re, html, ssl
-from xml.etree import ElementTree as ET
-from datetime import datetime, timezone
+"""Web3 行情热点采集器 v3
+四层架构：采集层 → 预处理层 → 输出层 → 健康检查层
+stdout 输出 JSON（AI 可 json.loads），stderr 输出人类可读文本。
 
-UA = {'User-Agent': 'Mozilla/5.0 (compatible; HTXOpsBot/2.0)'}
-ctx = ssl.create_default_context()
+用法：
+  python3 collect.py                 # 正常模式，stdout=JSON, stderr=文本
+  python3 collect.py --json-only     # 只输出 JSON（stderr 静默）
+  python3 collect.py --preflight     # 健康检查
+  python3 collect.py --source coingecko,gateio   # 只跑指定源
+"""
+import sys, os, json, time, argparse, concurrent.futures
+from datetime import datetime
 
-# 重点监控资产（需求文档核心池）
-WATCHLIST = [
-    "bitcoin","ethereum","solana","ripple","dogecoin","binancecoin","toncoin",
-    "tron","cardano","avalanche-2","chainlink","sui","pepe","dogwifcoin",
-    "shiba-inu","floki","bonk","fetch-ai","render-token","bittensor","worldcoin-wld",
-    "ondo-finance","ethena","arbitrum","optimism","aptos","injective-protocol",
-    "celestia","jupiter-exchange-solana","sei-network","near","aave","uniswap",
-    "lido-dao","pendle"
-]
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Telegram 公开频道监控列表（英文+中文币圈头部）
-TG_CHANNELS = [
-    # 中文币圈头部（已验证可抓取）
-    "wublock",              # 吴说区块链（头部，行情/大V观点）
-    "odaily_news",          # Odaily星球日报（头部媒体快讯）
-    "jinse",                # 金色财经（快讯/安全事件）
-    "chaincatcher",         # 链捕手（数据/ETF资金流）
-    # 英文信息源
-    "cointelegraph",        # 加密新闻
-    "whale_alert",          # 大额转账预警
-    "binance_announcements",# 币安公告
-]
+from sources.market import fetch_market_chain
+from sources.news import fetch_news_chain
+from sources.social import fetch_social_chain
+from sources.macro import fetch_macro_chain
+import preprocess
 
-def fetch(url, timeout=15):
-    req = urllib.request.Request(url, headers=UA)
-    return urllib.request.urlopen(req, timeout=timeout, context=ctx).read()
+DEBUG = True
 
-def get_market():
-    ids = ",".join(WATCHLIST)
-    url = f"https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids={ids}&price_change_percentage=1h,24h,7d&per_page=100"
-    data = json.loads(fetch(url))
-    out = []
-    for c in data:
-        out.append({
-            "symbol": c["symbol"].upper(), "name": c["name"],
-            "price": c["current_price"], "mc_rank": c["market_cap_rank"],
-            "vol": c["total_volume"],
-            "chg_1h": c.get("price_change_percentage_1h_in_currency"),
-            "chg_24h": c.get("price_change_percentage_24h_in_currency"),
-            "chg_7d": c.get("price_change_percentage_7d_in_currency"),
-        })
-    return out
 
-def get_news():
-    feeds = [
-        ("CoinTelegraph", "https://cointelegraph.com/rss"),
-        ("CoinDesk", "https://www.coindesk.com/arc/outboundfeeds/rss/"),
-        ("The Block", "https://www.theblock.co/rss.xml"),
-    ]
-    news = []
-    for src, url in feeds:
+def log(msg):
+    if DEBUG:
+        print(msg, file=sys.stderr, flush=True)
+
+
+def run_all():
+    """并发跑四大类源，20s 总超时"""
+    log("=" * 50)
+    log("collecting...")
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
+        f_market = ex.submit(fetch_market_chain)
+        f_news = ex.submit(fetch_news_chain)
+        f_social = ex.submit(fetch_social_chain)
+        f_macro = ex.submit(fetch_macro_chain)
+
         try:
-            root = ET.fromstring(fetch(url))
-            for item in root.iter("item"):
-                title = item.findtext("title") or ""
-                pub = item.findtext("pubDate") or ""
-                desc = item.findtext("description") or ""
-                desc = re.sub(r"<[^>]+>", "", desc)[:200]
-                news.append({"src": src, "title": html.unescape(title).strip(),
-                             "pub": pub, "desc": html.unescape(desc).strip()})
-        except Exception as e:
-            news.append({"src": src, "title": f"[FEED ERROR] {e}", "pub": "", "desc": ""})
-    return news[:40]
+            market_r, news_r, social_r, macro_r = (
+                f_market.result(timeout=20),
+                f_news.result(timeout=20),
+                f_social.result(timeout=20),
+                f_macro.result(timeout=20),
+            )
+        except concurrent.futures.TimeoutError:
+            log("!! 20s timeout, using partial results")
+            market_r = {"status": "timeout", "data": {}}
+            news_r = {"status": "timeout", "data": []}
+            social_r = {"status": "timeout", "data": []}
+            macro_r = {"status": "timeout", "data": []}
 
-def get_laohu():
-    """老虎社区热帖（jina 渲染，覆盖美股/ETF/港股视角）"""
-    out = []
-    try:
-        raw = fetch("https://r.jina.ai/https://www.laohu8.com/community").decode("utf-8", errors="ignore")
-        # 提取标题行（### 开头）和帖子链接
-        titles = re.findall(r'^###\s+(.+)$', raw, re.M)
-        for t in titles[:12]:
-            t = ' '.join(html.unescape(t).split())
-            if t and len(t) > 5:
-                out.append({"channel": "老虎社区", "text": t[:280], "time": ""})
-    except Exception as e:
-        out.append({"channel": "老虎社区", "text": f"[LAOHU ERROR] {e}", "time": ""})
+    # social 链返回 (result, per-source status) 或直接 result
+    if isinstance(social_r, tuple):
+        social_result, social_status = social_r
+    else:
+        social_result = social_r
+        social_status = social_r.get("source_status", {})
+
+    log(f"market: {market_r['status']}")
+    log(f"news: {news_r['status']} ({len(news_r.get('data', []))} items)")
+    log(f"social: {social_result['status']} ({len(social_result.get('data', []))} items)")
+    log(f"macro: {macro_r['status']} ({len(macro_r.get('data', []))} items)")
+
+    return market_r, news_r, social_result, macro_r, social_status
+
+
+def build_output(market_r, news_r, social_r, macro_r, social_status):
+    market = market_r.get("data", {})
+    news_items = news_r.get("data", [])
+    social_items = social_r.get("data", [])
+    macro_items = macro_r.get("data", [])
+
+    # 预处理
+    news_clean, news_archived = preprocess.filter_and_dedup(news_items)
+    social_clean, social_archived = preprocess.filter_and_dedup(social_items)
+    macro_clean, macro_archived = preprocess.filter_and_dedup(macro_items)
+    anomalies = preprocess.precompute_anomalies(market)
+
+    source_health = {
+        "market": market_r["status"],
+        "news": news_r["status"],
+        "social": social_r["status"],
+        "macro": macro_r["status"],
+        "fallback_used": {
+            "market": market_r.get("fallback_used", ""),
+            "news": news_r.get("fallback_used", ""),
+            "social": social_r.get("fallback_used", ""),
+            "macro": macro_r.get("fallback_used", ""),
+        },
+        "detail": {
+            "news": news_r.get("source_status", {}),
+            "social": social_status,
+            "macro": macro_r.get("source_status", {}),
+        },
+    }
+
+    out = {
+        "collected_at": datetime.now().astimezone().isoformat(),
+        "source_health": source_health,
+        "market": market,
+        "precomputed": anomalies,
+        "news": news_clean,
+        "news_archive": news_archived,
+        "social": social_clean,
+        "social_archive": social_archived,
+        "macro": macro_clean,
+        "macro_archive": macro_archived,
+    }
     return out
 
-def get_square():
-    """币安广场热帖（通过 jina 代理，绕过 CloudFront）"""
-    out = []
-    try:
-        raw = fetch("https://r.jina.ai/https://www.binance.com/zh-CN/square").decode("utf-8", errors="ignore")
-        pattern = r'\[([^\]]{10,200})\]\(https://www\.binance\.com/zh-CN/square/post/\d+\)'
-        posts = re.findall(pattern, raw)
-        seen = set()
-        for p in posts:
-            t = ' '.join(html.unescape(p).split())
-            if t and t not in seen and len(t) > 15:
-                seen.add(t)
-                out.append({"channel": "币安广场", "text": t[:280], "time": ""})
-            if len(out) >= 12:
-                break
-    except Exception as e:
-        out.append({"channel": "币安广场", "text": f"[SQUARE ERROR] {e}", "time": ""})
-    return out
-
-def get_eastmoney():
-    """东方财富财经快讯（官方API直连）"""
-    out = []
-    try:
-        url = "https://np-listapi.eastmoney.com/comm/web/getFastNewsList?client=web&biz=web_724&fastColumn=102&sortEnd=&pageSize=15&req_trace=1"
-        data = json.loads(fetch(url))
-        items = data.get("data", {}).get("fastNewsList", [])
-        for it in items[:15]:
-            summary = (it.get("summary") or "").strip()
-            if summary:
-                out.append({"channel": "东方财富", "text": summary[:280], "time": it.get("showTime", "")})
-    except Exception as e:
-        out.append({"channel": "东方财富", "text": f"[EASTMONEY ERROR] {e}", "time": ""})
-    return out
-
-def get_tg():
-    """抓取 Telegram 消息：优先 bot 监控群（可覆盖任意频道），兜底网页预览"""
-    out = []
-    # 方案1：bot 监控群（用户把频道加进群，bot 读取）
-    try:
-        from tg_monitor import fetch_group_messages
-        for m in fetch_group_messages():
-            out.append({"channel": m["channel"], "text": m["text"][:300], "time": ""})
-    except Exception as e:
-        out.append({"channel": "bot", "text": f"[TG BOT ERROR] {e}", "time": ""})
-
-    # 方案2：网页预览兜底（已接入的中文/英文频道）
-    for ch in TG_CHANNELS:
-        try:
-            raw = fetch(f"https://t.me/s/{ch}").decode("utf-8", errors="ignore")
-            blocks = re.findall(
-                r'<div class="tgme_widget_message text_not_supported_wrap js-widget_message".*?(?=<div class="tgme_widget_message text_not_supported_wrap js-widget_message"|$)',
-                raw, re.S)
-            for b in blocks[:4]:
-                text = re.search(r'class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>', b, re.S)
-                date = re.search(r'datetime="([^"]+)"', b)
-                t = html.unescape(re.sub(r'<[^>]+>', ' ', text.group(1))).strip() if text else ''
-                t = ' '.join(t.split())
-                if t:
-                    out.append({"channel": ch, "text": t[:300],
-                                "time": date.group(1) if date else ""})
-        except Exception as e:
-            out.append({"channel": ch, "text": f"[TG ERROR] {e}", "time": ""})
-    return out
 
 def main():
-    mkt = get_market()
-    news = get_news()
-    tg = get_tg()
-    square = get_square()
-    em = get_eastmoney()
-    laohu = get_laohu()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--preflight", action="store_true", help="健康检查模式")
+    ap.add_argument("--json-only", action="store_true", help="只输出 JSON")
+    ap.add_argument("--source", default="", help="只跑指定源（逗号分隔）")
+    args = ap.parse_args()
 
-    print("=" * 60)
-    print("MARKET DATA")
-    print("=" * 60)
-    for c in sorted(mkt, key=lambda x: x["chg_24h"] or 0, reverse=True):
-        print(f"{c['symbol']:<6} ${c['price']:>10,.2f}  1h:{c['chg_1h']:>6.2f}%  24h:{c['chg_24h']:>7.2f}%  7d:{c['chg_7d']:>7.2f}%  rank:{c['mc_rank']}")
+    global DEBUG
+    if args.json_only:
+        DEBUG = False
 
-    print()
-    print("=" * 60)
-    print(f"NEWS ({len(news)})")
-    print("=" * 60)
-    for n in news[:15]:
-        print(f"[{n['src']}] {n['title']}")
+    if args.preflight:
+        from preflight import main as preflight_main
+        preflight_main()
+        return
 
-    print()
-    print("=" * 60)
-    print(f"BINANCE SQUARE ({len(square)})")
-    print("=" * 60)
-    for m in square[:10]:
-        print(f"[{m['channel']}] {m['text'][:110]}")
+    t0 = time.time()
+    market_r, news_r, social_r, macro_r, social_status = run_all()
+    out = build_output(market_r, news_r, social_r, macro_r, social_status)
 
-    print()
-    print("=" * 60)
-    print(f"EASTMONEY ({len(em)})")
-    print("=" * 60)
-    for m in em[:10]:
-        print(f"[{m['channel']}] {m['text'][:110]}")
+    if not args.json_only:
+        # stderr 人类可读摘要
+        log(f"collected in {time.time()-t0:.1f}s")
+        m = out["market"]
+        if m:
+            log("\n-- TOP GAINERS (24h) --")
+            for g in out["precomputed"]["top_gainers"][:5]:
+                log(f"  {g['symbol']:<6} {g['chg_24h']:+.2f}%  ${g['price']:,.2f}")
+            log("-- TOP LOSERS (24h) --")
+            for g in out["precomputed"]["top_losers"][:5]:
+                log(f"  {g['symbol']:<6} {g['chg_24h']:+.2f}%  ${g['price']:,.2f}")
+        log(f"\nnews: {len(out['news'])} fresh / {len(out['news_archive'])} archived")
+        log(f"social: {len(out['social'])} / macro: {len(out['macro'])}")
+        log(f"cross_verified: {sum(1 for n in out['news'] if n['cross_verified'])}")
 
-    print()
-    print("=" * 60)
-    print(f"LAOHU ({len(laohu)})")
-    print("=" * 60)
-    for m in laohu[:10]:
-        print(f"[{m['channel']}] {m['text'][:110]}")
+    print(json.dumps(out, ensure_ascii=False))
 
-    print()
-    print("=" * 60)
-    print(f"TELEGRAM ({len(tg)})")
-    print("=" * 60)
-    for m in tg[:20]:
-        print(f"[@{m['channel']}] {m['time'][:16]} {m['text'][:110]}")
 
 if __name__ == "__main__":
     main()

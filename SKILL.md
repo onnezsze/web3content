@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
-description: "Web3 行情热点采集与分析：多源抓取加密行情、新闻、社媒热点（Telegram/币安广场/东方财富/老虎社区），输出日报、KOL创作选题、推文/短视频/直播内容框架和交易场景参考。"
-version: 3.0.0
+description: "Web3 行情热点采集与分析：多源抓取加密行情、新闻、社媒热点（Telegram/币安广场/东方财富/老虎社区/华尔街见闻），JSON结构化输出（含异动预计算、交叉验证、健康检查），支持日报/KOL创作选题/推文/短视频/直播内容框架。"
+version: 4.0.0
 author: Lucas + Hermes Agent
 license: MIT
 platforms: [linux, macos]
@@ -12,7 +12,7 @@ metadata:
 
 # Web3 行情热点采集与分析
 
-多源采集 Web3 市场数据（行情/新闻/社媒/传统金融联动），输出结构化分析结果。服务两类用户：
+多源采集 Web3 市场数据（行情/新闻/社媒/传统金融联动），四层架构输出 JSON 结构化结果。服务两类用户：
 - **机构内容运营**：交易所/平台内容团队，需要日报、选题、交易场景建议
 - **币圈 KOL/内容创作者**：独立博主、主播、短视频创作者，需要可直接用的内容素材
 
@@ -22,45 +22,82 @@ metadata:
 - 需要监控市场异动、重大新闻、社媒讨论热点
 - 需要生成内容选题（推文/短视频/直播/图文/社群）
 - 需要为观点找数据支撑（涨幅榜、资金流、ETF数据）
-- 需要了解宏观/传统金融（美股/A股）与加密市场的联动
 - 任何 AI Agent（Codex/Claude/Hermes）需要实时 Web3 市场情报时
 
 ## 使用方式（AI Agent 调用）
 
-### 1. 采集数据
+### 采集数据（JSON 输出，AI 可直接 json.loads）
 
 ```bash
-python3 scripts/collect.py
+python3 scripts/collect.py --json-only   # stdout=JSON（推荐 AI 使用）
+python3 scripts/collect.py               # stdout=JSON + stderr=人类可读摘要
+python3 scripts/collect.py --preflight   # 健康检查（5s）
 ```
 
-脚本用纯 Python 标准库实现（无第三方依赖），输出六段结构化文本：
+### JSON 结构
+
+```json
+{
+  "collected_at": "ISO时间戳",
+  "source_health": {
+    "market": "ok|failed", "news": "ok|failed", "social": "ok|failed", "macro": "ok|failed",
+    "fallback_used": {"market": "CoinGecko|GateIO|OKXBinance", "...": ""},
+    "detail": {"news": {"RSSNews": "ok", "EastMoneyNews": "ok"}, "...": "..."}
+  },
+  "market": {"BTC": {"symbol","price","vol","chg_1h","chg_24h","chg_7d","source"}, "...": "..."},
+  "precomputed": {
+    "top_gainers": [{"symbol","chg_24h","price"}],
+    "top_losers": [...],
+    "volume_anomalies": [...],
+    "dump_pump": [{"symbol","chg_1h"}]   // 1h 波动 >5%
+  },
+  "news": [{"title","src","tags","published_at","dedup_key","sources","cross_verified"}],
+  "news_archive": [...],   // 超过24h的旧闻
+  "social": [...],
+  "macro": [...]
+}
+```
+
+### 健康检查
+
+```bash
+python3 scripts/collect.py --preflight
+# 输出 12 个源的 ok/failed + 延迟，AI 据此决定数据可信度
+```
+
+## 四层架构
 
 ```
-MARKET DATA      - 38个重点资产：价格/1h/24h/7d涨跌幅/市值排名
-NEWS             - 全球加密新闻（CoinTelegraph/CoinDesk/The Block RSS）
-BINANCE SQUARE   - 币安广场 KOL 观点/散户情绪
-EASTMONEY        - 东方财富财经快讯（A股/宏观）
-LAOHU            - 老虎社区热帖（美股/ETF/港股）
-TELEGRAM         - 中文头部频道（吴说/Odaily/金色财经/链捕手）+ 英文源
+采集层（sources/）→ 预处理层（preprocess.py）→ 输出层 → 健康检查层（preflight.py）
 ```
 
-### 2. AI 分析
+### 采集层：Source 类 + fallback 链
+- **行情**：CoinGecko 主源 → Gate.io fallback → OKX/Binance fallback（三级）
+- **新闻**：RSS（CoinTelegraph/CoinDesk/TheBlock） + 东方财富（加密过滤）并发合并
+- **社媒**：Telegram 7频道 + 币安广场(jina) + 老虎社区(直连HTML) 并发合并
+- **宏观**：东方财富快讯 + 华尔街见闻 lives 并发合并
+- 全部并发执行，总超时 20s，单源失败不阻断其他源
 
-将采集输出作为上下文，按下方框架生成内容。AI 可从脚本输出中提取：
-- 异动资产（24h/7d 涨跌幅排序）
-- 热点事件（新闻标题 + 社媒讨论 + 行情异动交叉验证）
-- 多空观点（KOL 帖子 + 新闻观点）
-- 数据弹药（价格、涨幅、资金流、ETF 数字）
+### 预处理层
+- **去重**：精确 dedup_key（标题归一化 md5）+ 相似度匹配（token 集合 Jaccard>0.4）
+- **时间过滤**：只保留 24h 内，旧闻进 archive
+- **关键词打标**：tags.json 配置，[BTC]/[ETH]/[ETF]/[DeFi]/[Meme]/[AI]/[地缘]/[宏观]/[监管]/[安全事件]等
+- **异动预计算**：top_gainers/top_losers/volume_anomalies/dump_pump
+- **交叉验证**：同一事件 ≥2 源出现 → cross_verified: true（AI 优先采用）
 
-## 输出框架 A：机构内容运营（日报）
+### 健康检查层
+preflight.py 并发 ping 12 个源，输出 ok/failed + 延迟 ms。
 
-### 日报格式
+## 分析框架
+
+### 输出框架 A：机构内容运营（日报）
 ```
 【Web3行情热点日报｜M月D日】
 一、市场概览（BTC/ETH 价格、24h/7d 涨跌、市场情绪、今日主线）
 二、今日Top 5热点（标题、热度评分0-10、相关资产、核心逻辑、运营建议、交易卡片建议）
-三、异动资产榜（涨幅/跌幅/成交量放大/冲高回落标注）
-四、内容形式建议（行情圆桌/辩论赛/单点深度解读/社区图文贴/短视频/数据可视化/社群互动/快讯速报，每条含理由、制作要点、相关资产）
+   - 优先采用 cross_verified=true 的事件
+三、异动资产榜（直接用 precomputed 数据）
+四、内容形式建议（行情圆桌/辩论赛/单点深度解读/社区图文贴/短视频/数据可视化/社群互动/快讯速报）
 五、推文/社群内容建议
 六、交易场景建议（优先关注/可挂卡片/仅讨论）
 七、风险提示
@@ -72,102 +109,44 @@ TELEGRAM         - 中文头部频道（吴说/Odaily/金色财经/链捕手）+
 - 5-6.9分：B级，日报观察
 - 5分以下：C级，仅记录
 
-评分维度：行情波动、成交量变化、社媒热度、新闻权威性、影响范围、交易相关性、内容运营价值。
+### 输出框架 B：KOL/内容创作者工作台
+- B1 今日内容选题 TOP5（选题+热度+内容形态+爆点）
+- B2 推文速写（3-5条可直接发，观点型/情绪型/信息型）
+- B3 Thread 大纲（Hook→数据→观点→反驳→互动）
+- B4 短视频脚本（前3秒Hook+画面+口播+CTA+平台）
+- B5 直播/视频大纲（开场钩子+主线+互动+收尾）
+- B6 观点弹药库（多空观点+KOL观点摘录+可引用数据）
+- B7 数据卡片（3-5个可直接做图的数字）
+- B8 本周内容日历
+- B9 合规红线
 
-## 输出框架 B：KOL/内容创作者工作台
-
-当用户是创作者身份时（或明确要求"选题/推文/脚本"时），按以下框架输出：
-
-### B1. 今日内容选题 TOP5
-每个选题包含：选题标题、热度评分、相关资产、适合内容形态（标注主推+备选）、一句话核心观点、爆点（用户为什么会点开/转发）
-
-内容形态选项：推文 / Thread / 短视频(15-60s) / 直播 / 图文长文 / 社群讨论 / 数据卡片
-
-### B2. 推文速写（3-5条）
-每条：可直接发布的推文正文（含话题标签 #BTC #Web3 等）、建议配图类型（涨幅榜截图/资金流图/表情包）、最佳发布时间段
-
-推文风格分层：
-- 观点型：有明确立场，带数据支撑
-- 情绪型：共鸣感强，口语化
-- 信息型：快讯速报，简洁
-
-### B3. Thread 大纲（观点型）
-若某热点适合深挖，给出 thread 结构：
-- Hook（第一推，制造悬念/立场）
-- 数据铺垫（2-3条推，用真实数字）
-- 核心观点（1-2条推，逻辑链）
-- 反面观点回应（1条）
-- 互动引导（最后一条，抛问题/投票）
-
-### B4. 短视频脚本（15-60秒）
-每条脚本包含：
-- Hook 前3秒（决定划走还是留下）
-- 画面建议（行情图/文字卡/出镜口播）
-- 口播文案（逐句）
-- CTA（关注/评论区提问）
-- 适用平台（X/TikTok/YouTube Shorts/抖音）
-
-### B5. 直播/视频大纲
-- 开场钩子（30秒内吸引停留）
-- 主线内容（3-4个段落，每段有观点和数据）
-- 互动设计（弹幕问题、投票、连麦点）
-- 收尾（观点总结 + 下期预告）
-
-### B6. 观点弹药库
-- 今日多空观点（正反方各2-3条，附数据依据）
-- KOL 观点摘录（来自币安广场/吴说/Odaily，标注来源，仅作参考）
-- 可引用数据点（价格、涨幅、ETF资金流、爆仓数据等真实数字）
-
-### B7. 数据卡片
-3-5 个可直接做图的数字（适合做涨幅榜图、资金流图、对比图），每个含：数据标题、数字、来源、一句话解读
-
-### B8. 本周内容日历
-基于热点趋势给本周 3-5 个内容方向排期（周一到周日），标注哪天发什么类型、跟什么热点
-
-### B9. 合规红线（创作者必看）
+### 合规要求（强制）
 - 禁用词：稳赚、必涨、抄底、暴富、翻倍、保证收益、精准预测、内幕消息
-- 未确认消息必须标注"未确认"
-- 引用他人观点须注明来源
-- 涉及项目方/代币的推广须声明利益关系
-- 所有行情内容建议附带风险提示
+- 未确认消息标注"未确认"；引用他人观点注明来源；涉及项目方推广声明利益关系
+- 所有行情内容含风险提示
 
-## 关键实现细节
+## 配置
 
-### 币安广场
-直接 curl 被 CloudFront 拦截，必须走 jina 代理：
-```
-https://r.jina.ai/https://www.binance.com/zh-CN/square
-```
-正则提取 `\[标题\]\(https://www.binance.com/zh-CN/square/post/\d+\)`
+### scripts/symbol_map.json
+- watchlist：37 个资产，symbol + CoinGecko id + alias（RNDR→RENDER, MATIC→POL, FTM→S, GRAM→TON）
+- gate_precision：PEPE/BONK 价格放大系数（避免精度丢失）
+- top_n_for_7d：7d K线补齐数量
 
-### 东方财富快讯
-官方 API 直连：
-```
-https://np-listapi.eastmoney.com/comm/web/getFastNewsList?client=web&biz=web_724&fastColumn=102&pageSize=15&req_trace=1
-```
-
-### 老虎社区
-JS 渲染，走 jina 代理 `https://r.jina.ai/https://www.laohu8.com/community`，提取 `### ` 标题行。
-
-### Telegram 频道
-`https://t.me/s/频道名` 网页预览。已验证可用：wublock、odaily_news、jinse、chaincatcher、cointelegraph、whale_alert、binance_announcements。注意：PANews/律动/深潮等中文媒体关闭了网页预览，无法抓取。
-
-### 数据源访问性
-- CoinGecko API：免费，无需 key（有速率限制，采集间隔建议≥30秒）
-- RSS 新闻源：免费
-- jina 代理：免费但有速率限制，采集间隔建议≥10分钟
+### scripts/tags.json
+关键词标签字典，可自由扩展。
 
 ## 已知限制
 
 - X/推特无 API 无法免费抓取（nitter 镜像已全部失效）
-- 币安广场/老虎社区依赖 jina 代理，速率受限
+- 币安广场依赖 jina 代理（不稳定，失败自动降级）
 - whale_alert 网页预览有旧数据缓存，需过滤时间异常条目
 - 中文媒体（PANews/律动/深潮等）关闭 Telegram 网页预览
+- 交叉验证依赖多源报道同一事件，中英文源内容域不同时可能为 0（正常）
 
 ## 环境要求
 
 - Python 3.8+（纯标准库，无 pip 依赖）
-- 网络可访问：api.coingecko.com / r.jina.ai / np-listapi.eastmoney.com / t.me / 各 RSS 源
+- 网络可访问：api.coingecko.com / data.gateapi.io / api.okx.com / api.binance.com / r.jina.ai / np-listapi.eastmoney.com / api-one-wscn.awtmt.com / t.me / www.laohu8.com / 各 RSS 源
 
 ## 配置清单
 

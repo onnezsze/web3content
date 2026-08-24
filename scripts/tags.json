@@ -1,0 +1,21 @@
+{
+  "tags": {
+    "BTC": ["btc", "bitcoin", "比特币", "大饼"],
+    "ETH": ["eth", "ethereum", "以太坊"],
+    "SOL": ["sol", "solana"],
+    "ETF": ["etf", "现货etf", "etf资金"],
+    "DeFi": ["defi", "借贷", "aave", "compound", "流动性"],
+    "Meme": ["meme", "memecoin", "pepe", "doge", "shib", "floki", "bonk", "wif"],
+    "L2": ["layer2", "arbitrum", "optimism", "base", "zk", "rollup"],
+    "AI": ["ai", "agent", "gpt", "claude", "anthropic", "openai", "nvidia", "算力", "人工智能"],
+    "地缘": ["战争", "冲突", "伊朗", "俄罗斯", "乌克兰", "中东", "制裁"],
+    "宏观": ["fed", "fomc", "cpi", "利率", "通胀", "美元指数", "美债", "非农", "降息", "加息"],
+    "监管": ["sec", "cfc", "监管", "合规", "miCA", "法案", "牌照"],
+    "安全事件": ["hack", "exploit", "攻击", "被盗", "漏洞", "rug", "跑路"],
+    "交易所": ["binance", "币安", "okx", "coinbase", "gate", "htx", "bybit"],
+    "稳定币": ["usdt", "usdc", "稳定币", "dai"],
+    "存储": ["hbm", "存储", "海力士", "sk hynix", "micron", "三星"],
+    "美股": ["美股", "nasdaq", "标普", "道琼斯", "tesla", "apple", "microsoft"],
+    "港股/A股": ["港股", "a股", "沪深", "恒生", "阿里", "腾讯", "阿里巴巴"]
+  }
+}
