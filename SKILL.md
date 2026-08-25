@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区/DogDoing），JSON结构化输出（异动预计算、交叉验证、情绪词频、OI异动、恐惧贪婪、Alpha热点、预测市场、美股板块、昨日热点存档、健康检查），11段式日报模板服务内容运营与KOL创作。"
-version: 6.1.0
+version: 6.2.0
 author: Lucas + Hermes Agent
 license: MIT
 platforms: [linux, macos]
@@ -33,6 +33,7 @@ python3 scripts/report.py                # 【推荐 AI/cron/tg_bot 入口】精
 python3 scripts/charts.py                # 【配图生成】涨幅榜/跌幅榜/情绪词频 → PNG，输出 MEDIA: 路径供直接发送
 python3 scripts/collect.py --json-only   # stdout=完整 JSON（仅当需要原始字段时）
 python3 scripts/collect.py --preflight   # 健康检查（5s）
+python3 scripts/feishu_doc.py            # 【飞书文档输出】把日报排版成飞书文档，stdout 末尾打印 FEISHU_DOC_URL
 ```
 
 ### JSON 结构
@@ -144,6 +145,13 @@ preflight.py 并发 ping 18 源（含 6 个 DogDoing 探针），输出 ok/faile
 - 中文渲染依赖系统 CJK 字体（Ubuntu 文泉驿正黑），matplotlib findfont 的 weight 警告可忽略
 - 颜色约定：红涨绿跌（中文用户习惯），改 charts.py 顶部 COLOR_UP/COLOR_DOWN 可切币圈绿涨红跌
 
+### feishu_doc.py 飞书文档输出（v6.2 新增）
+把 `report.py` 的日报文本排版成**飞书云文档**（Feishu docx），供用户直接看，避免在聊天里发文字+图片刷屏。
+- 读取 `~/.hermes/.env` 的 `FEISHU_APP_ID/FEISHU_APP_SECRET` 换取 tenant_access_token（无需额外配置）
+- 创建文档 → 把 report 文本转成 block（`#/##/【`→heading、`•`→bullet、其余→text）→ 分批插入 → 把用户(open_id)加为 `view` 协作者
+- stdout 末尾打印 `FEISHU_DOC_URL: <链接>`；定时任务/agent 只需回传该链接
+- **已知限制**：当前飞书应用只允许插入 text/heading/bullet/ordered/quote/code 块；`image`(27)/`table`(22)/`divider`(31) 复杂块会被拒（错误 1770001）。因此**配图无法内嵌进文档**（图表仍可由 charts.py 单独生成、经飞书图片上传另行处理）。若需文档内嵌图/表，需在飞书开放平台为应用追加 docx/drive 相关权限并重新发布。
+
 ### 热点评分模型（分项可复用可对比）
 - 社媒声量 0-2.5 / 成交量变化 0-2.5 / 价格波动 0-2.5 / 媒体覆盖 0-2.5 = 满分10
 - 9-10 S级 / 7-8.9 A级 / 5-6.9 B级 / <5 C级
@@ -176,6 +184,7 @@ preflight.py 并发 ping 18 源（含 6 个 DogDoing 探针），输出 ok/faile
 - 中英文源内容域不同时交叉验证可能为 0（正常，非 bug）
 - 中文媒体（PANews/律动/深潮）关闭 TG 网页预览
 - DogDoing 维度依赖其公开 /api/* 代理（Next.js），若其限流/变更接口字段或整体下线，dogdoing 块自动报 failed，其余源不受影响（fail-soft）
+- 飞书文档：当前应用的 docx 权限只支持 text/heading/bullet/ordered/quote/code 块，`image`/`table`/`divider` 复杂块会被 API 拒绝（1770001），故日报配图暂不能内嵌进飞书文档（需为应用追加 docx/drive 权限并重新发布）
 
 ## 环境要求
 
