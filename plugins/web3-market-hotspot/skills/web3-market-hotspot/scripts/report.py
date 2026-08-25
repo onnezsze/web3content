@@ -134,9 +134,9 @@ def build_data_cards(market, funding, news_items, precomputed):
     return cards[:12]
 
 
-def circle_dynamics(news_items, social_items, macro_items, top=10):
-    """圈内动态：定向监测 交易所 / 链·生态 / 交易所老板高管 / 孙哥(孙宇晨) / 币圈KOL / 特朗普(加密相关)。
-    从新闻+社媒+宏观里按主体关键词打分，返回 [{title, summary, src, kind}]。"""
+def circle_dynamics(news_items, social_items, macro_items, top=5):
+    """圈内动态：监测 交易所 / 链·生态 / 交易所老板高管 / 孙哥(孙宇晨) / 币圈KOL / 特朗普(加密相关)。
+    按优先级(孙哥>特朗普>交易所>老板高管>币圈KOL>链/生态)+重要程度筛选，返回 top 条 [{title, summary, src, kind}]。"""
     CIRCLE_ENTITY = {
         "孙哥/孙宇晨": ["孙宇晨", "孙哥", "justin sun", "波场", "tron"],
         "交易所老板高管": ["cz", "赵长鹏", "brian armstrong", "richard teng", "coinbase ceo", "binance ceo",
@@ -169,17 +169,28 @@ def circle_dynamics(news_items, social_items, macro_items, top=10):
             s += 1
         return s
 
+    PRIORITY = {"孙哥/孙宇晨": 1, "特朗普/监管": 2, "交易所": 3, "交易所老板高管": 4,
+                "币圈KOL": 5, "链/生态": 6}
+
+    def priority(it):
+        t = (it["title"] + " " + it["text"]).lower()
+        ranks = [PRIORITY[g] for g, kws in CIRCLE_ENTITY.items() if any(k.lower() in t for k in kws)]
+        return min(ranks) if ranks else 99
+
     for it in pool:
         it["score"] = score(it)
+        it["priority"] = priority(it)
+
     # 加密相关性门控：必须含加密关键词，过滤无关股市/政治/关税
     CRYPTO_KW = ["btc", "bitcoin", "eth", "ethereum", "加密", "crypto", "coinbase", "binance", "币安", "okx",
                  "欧易", "token", "代币", "稳定币", "stablecoin", "tron", "波场", "solana", "etf", "交易所",
                  "合约", "现货", "主网", "链上", "数字资产", "defi", "nft", "meme", "web3", "doge", "xrp"]
-    cand = sorted([it for it in pool
-                   if it["score"] >= 3 and any(k in (it["title"] + " " + it["text"]).lower() for k in CRYPTO_KW)],
-                  key=lambda x: x["score"], reverse=True)
+    cand = [it for it in pool
+            if it["score"] >= 3 and any(k in (it["title"] + " " + it["text"]).lower() for k in CRYPTO_KW)]
+    # 按优先级(小=高)再按重要程度(score 降序)排序
+    cand.sort(key=lambda x: (x["priority"], -x["score"]))
 
-    # 标题去重
+    # 标题去重(同优先级内保留分数高者)
     seen, out = set(), []
     for it in cand:
         k = re.sub(r"[^\w]", "", it["title"][:36]).lower()
@@ -329,9 +340,9 @@ def main():
     for n in macro_clean[:10]:
         print(f"  [{n.get('src','?')}] {n['title'][:90]}")
 
-    # 12.5 圈内动态（交易所/链·生态/老板高管/孙哥/币圈KOL/特朗普）
+    # 12.5 圈内动态（按优先级+重要程度取前5）
     print()
-    print("## 圈内动态（交易所 · 链·生态 · 老板高管 · 孙哥 · 币圈KOL · 特朗普）")
+    print("## 圈内动态")
     cd = circle_dynamics(news_items, social_items, macro_clean)
     if cd:
         for i, it in enumerate(cd, 1):
