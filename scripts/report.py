@@ -148,7 +148,7 @@ def main():
     social_items = d.get("social", [])
     macro_items = d.get("macro", [])
     print(f"# 数据采集时间: {now}（采集于 {d.get('collected_at','')}）")
-    print(f"# 数据源健康: market={d['source_health']['market']} news={d['source_health']['news']} social={d['source_health']['social']} macro={d['source_health']['macro']}")
+    print(f"# 数据源健康: market={d['source_health']['market']} news={d['source_health']['news']} social={d['source_health']['social']} macro={d['source_health']['macro']} dogdoing={d['source_health'].get('dogdoing','?')}")
     print()
 
     # 1. 数据卡速览
@@ -264,6 +264,57 @@ def main():
     macro_clean = [n for n in macro_items if not is_macro_noise(n.get("title", ""))]
     for n in macro_clean[:10]:
         print(f"  [{n.get('src','?')}] {n['title'][:90]}")
+
+    # 13. DogDoing 扩展维度（非冗余：OI异动/恐惧贪婪/Alpha热点/广场热度/预测市场/美股）
+    dd = d.get("dogdoing", {}) or {}
+    print()
+    if not dd:
+        print("## DogDoing 扩展维度: 未获取（数据源降级）")
+        return
+    print("## DogDoing 扩展维度（OI异动 · 恐惧贪婪 · Alpha热点 · 广场热度 · 预测市场 · 美股）")
+
+    def _data(key):
+        v = dd.get(key)
+        return v.get("data") if isinstance(v, dict) and isinstance(v.get("data"), list) else None
+
+    fg = dd.get("fear_greed") or {}
+    fgv = fg.get("data") if isinstance(fg, dict) and isinstance(fg.get("data"), dict) else fg
+    if isinstance(fgv, dict) and fgv.get("value") is not None:
+        print(f"  恐惧贪婪指数: {int(fgv['value'])}（{fgv.get('label','?')}）")
+
+    oi = _data("oi_divergence")
+    if oi:
+        print("  【OI持仓量异动｜价格vs持仓背离】")
+        for it in oi[:6]:
+            print(f"    {it.get('symbol','?'):<8} OI +{it.get('oiChangePct',0):.1f}% 价格 {it.get('priceChangePct',0):+.1f}% 背离 {it.get('divergenceRatio',0):.1f}")
+
+    ah = _data("alpha_hotspots")
+    if ah:
+        print("  【Binance Alpha 热点板块】")
+        for it in ah[:6]:
+            print(f"    {it.get('name','')[:36]} | 净流入 {float(it.get('netInflow') or 0):.3g} | {it.get('type','?')} | 代币x{it.get('tokenSize','?')}")
+
+    sh = _data("square_hype")
+    if sh:
+        print("  【币安广场热度 $TICKER】")
+        for it in sh[:6]:
+            print(f"    {it.get('symbol','?'):<8} 热度分 {it.get('score','?')} (源{it.get('sources','?')}) 24h {it.get('priceChangePct',0):+.1f}%")
+
+    pm = _data("prediction_markets")
+    if pm:
+        print("  【42.space 预测市场】")
+        for it in pm[:5]:
+            print(f"    {it.get('question','')[:60]} | 量 ${float(it.get('volume') or 0):,.0f} | {it.get('status','?')}")
+
+    us = _data("us_stocks")
+    if us:
+        print("  【美股板块（Mag7 / AI热门）】")
+        for it in us[:8]:
+            line = f"    {it.get('symbol','?'):<6} {str(it.get('name',''))[:12]} {it.get('changePct',0):+.2f}%"
+            nw = (it.get("news") or [])[:1]
+            if nw:
+                line += f" | {str(nw[0].get('title',''))[:46]}"
+            print(line)
 
 
 if __name__ == "__main__":

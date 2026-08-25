@@ -97,6 +97,92 @@ def sentiment_chart(counts, out_path):
     plt.close(fig)
     return True
 
+def oi_chart(items, out_path):
+    """OI 持仓量异动：每股两根横向条（OI变化% vs 价格变化%），背离直观可见"""
+    if not items:
+        print("（OI持仓量异动: 无数据，跳过）")
+        return False
+    import numpy as np
+    items = items[:8]
+    labels = [it.get("symbol", "?") for it in items]
+    oi_vals = [it.get("oiChangePct", 0) for it in items]
+    px_vals = [it.get("priceChangePct", 0) for it in items]
+    y = np.arange(len(items))
+    h = 0.36
+    fig, ax = plt.subplots(figsize=(9, 6))
+    ax.barh(y + h / 2, oi_vals, height=h, color="#e74c3c", label="OI 变化 %")
+    ax.barh(y - h / 2, px_vals, height=h, color="#5b8ff9", label="价格变化 %")
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels, fontsize=11)
+    ax.invert_yaxis()
+    ax.axvline(0, color="#666", lw=0.8)
+    ax.set_xlabel("变化 %", fontsize=10)
+    ax.set_title("OI 持仓量异动｜价格 vs 持仓（背离预警）", fontsize=14,
+                 fontweight="bold", color=COLOR_TITLE, pad=12)
+    ax.legend(fontsize=10, loc="lower right")
+    ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=150)
+    plt.close(fig)
+    return True
+
+
+def fear_greed_chart(fg, out_path):
+    """恐惧贪婪指数：0-100 横向指示条 + 值/标签"""
+    if not isinstance(fg, dict) or fg.get("value") is None:
+        print("（恐惧贪婪指数: 无数据，跳过）")
+        return False
+    val = int(fg["value"])
+    label = fg.get("label", "?")
+    fig, ax = plt.subplots(figsize=(9, 3))
+    ax.barh([0], [val], color=COLOR_BAR, height=0.5)
+    ax.set_xlim(0, 100)
+    ax.set_ylim(-0.6, 0.7)
+    ax.set_yticks([0])
+    ax.set_yticklabels(["指数"], fontsize=11)
+    for x in [0, 25, 50, 75, 100]:
+        ax.axvline(x, color="#ddd", lw=0.6)
+        ax.text(x, -0.4, str(x), ha="center", fontsize=9, color="#888")
+    ax.text(val + 2, 0, f"{val}  {label}", va="center", fontsize=15,
+            fontweight="bold", color=COLOR_TITLE)
+    ax.set_title("加密恐惧贪婪指数 Fear & Greed", fontsize=14,
+                 fontweight="bold", color=COLOR_TITLE, pad=12)
+    ax.spines[["top", "right", "left"]].set_visible(False)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=150)
+    plt.close(fig)
+    return True
+
+
+def stocks_chart(items, out_path):
+    """美股 Mag7 / 热门涨跌横向条"""
+    if not items:
+        print("（美股板块: 无数据，跳过）")
+        return False
+    items = items[:8]
+    labels = [f"{it.get('symbol','?')} {str(it.get('name',''))[:10]}" for it in items]
+    vals = [it.get("changePct", 0) for it in items]
+    fig, ax = plt.subplots(figsize=(9, 5))
+    colors = [COLOR_UP if v >= 0 else COLOR_DOWN for v in vals]
+    y = range(len(items))
+    ax.barh(list(y), vals, color=colors, height=0.62)
+    ax.set_yticks(list(y))
+    ax.set_yticklabels(labels, fontsize=11)
+    ax.invert_yaxis()
+    ax.axvline(0, color="#666", lw=0.8)
+    for i, v in enumerate(vals):
+        ax.text(v + (0.05 if v >= 0 else -0.05), i, f"{v:+.2f}%",
+                va="center", ha="left" if v >= 0 else "right", fontsize=10)
+    ax.set_xlabel("涨跌幅 %", fontsize=10)
+    ax.set_title("美股板块（Mag7 / AI热门）", fontsize=14,
+                 fontweight="bold", color=COLOR_TITLE, pad=12)
+    ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=150)
+    plt.close(fig)
+    return True
+
+
 def main():
     d = load_data(sys.argv)
     day = datetime.now().strftime("%Y%m%d")
@@ -105,6 +191,11 @@ def main():
 
     pc = d.get("precomputed", {})
     s = d.get("sentiment", {}).get("counts", {})
+    dd = d.get("dogdoing", {}) or {}
+
+    def dd_list(key):
+        v = dd.get(key)
+        return v.get("data") if isinstance(v, dict) and isinstance(v.get("data"), list) else None
 
     paths = []
     if bar_rank(pc.get("top_gainers", []), "24h 涨幅榜 Top10", os.path.join(out_dir, "gainers.png")):
@@ -113,6 +204,14 @@ def main():
         paths.append(os.path.join(out_dir, "losers.png"))
     if sentiment_chart(s, os.path.join(out_dir, "sentiment.png")):
         paths.append(os.path.join(out_dir, "sentiment.png"))
+    if oi_chart(dd_list("oi_divergence"), os.path.join(out_dir, "oi.png")):
+        paths.append(os.path.join(out_dir, "oi.png"))
+    fg = dd.get("fear_greed") or {}
+    fgv = fg.get("data") if isinstance(fg, dict) and isinstance(fg.get("data"), dict) else fg
+    if fear_greed_chart(fgv, os.path.join(out_dir, "fear_greed.png")):
+        paths.append(os.path.join(out_dir, "fear_greed.png"))
+    if stocks_chart(dd_list("us_stocks"), os.path.join(out_dir, "stocks.png")):
+        paths.append(os.path.join(out_dir, "stocks.png"))
 
     if not paths:
         print("无任何图表生成（数据为空），请检查采集")

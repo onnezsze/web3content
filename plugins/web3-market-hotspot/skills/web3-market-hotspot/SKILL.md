@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
-description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区），JSON结构化输出（异动预计算、交叉验证、情绪词频、昨日热点存档、健康检查），10段式日报模板服务内容运营与KOL创作。"
-version: 5.0.0
+description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区/DogDoing），JSON结构化输出（异动预计算、交叉验证、情绪词频、OI异动、恐惧贪婪、Alpha热点、预测市场、美股板块、昨日热点存档、健康检查），11段式日报模板服务内容运营与KOL创作。"
+version: 6.1.0
 author: Lucas + Hermes Agent
 license: MIT
 platforms: [linux, macos]
@@ -12,7 +12,7 @@ metadata:
 
 # Web3 行情热点采集与分析
 
-多源采集 Web3 市场数据，四层架构输出 JSON 结构化结果，10 段式日报模板。服务两类用户：
+多源采集 Web3 市场数据，四层架构输出 JSON 结构化结果，11 段式日报模板（含站外创作者速用包），配 charts.py 自动生成数据卡片图。服务两类用户：
 - **机构内容运营**：交易所/平台内容团队
 - **币圈 KOL/内容创作者**：独立博主、主播、短视频创作者
 
@@ -29,8 +29,9 @@ metadata:
 ### 采集数据
 
 ```bash
-python3 scripts/collect.py --json-only   # stdout=JSON（AI 推荐）
-python3 scripts/collect.py               # stdout=JSON + stderr=人类可读
+python3 scripts/report.py                # 【推荐 AI/cron/tg_bot 入口】精简结构化文本，避免大 JSON 截断
+python3 scripts/charts.py                # 【配图生成】涨幅榜/跌幅榜/情绪词频 → PNG，输出 MEDIA: 路径供直接发送
+python3 scripts/collect.py --json-only   # stdout=完整 JSON（仅当需要原始字段时）
 python3 scripts/collect.py --preflight   # 健康检查（5s）
 ```
 
@@ -39,12 +40,18 @@ python3 scripts/collect.py --preflight   # 健康检查（5s）
 ```json
 {
   "collected_at": "ISO时间戳",
-  "source_health": {"market":"ok","news":"ok","social":"ok","macro":"ok","detail":{...}},
+  "source_health": {"market":"ok","news":"ok","social":"ok","macro":"ok","dogdoing":"ok","detail":{...}},
   "market": {"BTC": {"price","vol","chg_1h","chg_24h","chg_7d","source"}, ...},
   "precomputed": {"top_gainers":[...],"top_losers":[...],"volume_anomalies":[...],"dump_pump":[...]},
   "funding": {"BTC": {"funding_rate","annualized_pct"}, "ETH":..., "SOL":...},
   "sentiment": {"counts": {"恐慌":2,"焦虑":1,...}, "samples": {...}},
   "yesterday_top3": {"date":"...","topics":[...]} | null,
+  "dogdoing": {"fear_greed":{"value":"74","label":"Greed"},
+               "oi_divergence":[{"symbol","oiChangePct","priceChangePct","divergenceRatio"},...],
+               "alpha_hotspots":[{"name","netInflow","type","tokenSize","tokens"},...],
+               "square_hype":[{"symbol","score","sources","priceChangePct"},...],
+               "prediction_markets":[{"question","volume","traders","status","outcomes"},...],
+               "us_stocks":[{"symbol","name","changePct","news":[{"title","source"}]},...]},
   "news": [{"title","src","tags","published_at","dedup_key","sources","cross_verified"}],
   "social": [...], "macro": [...]
 }
@@ -56,12 +63,13 @@ python3 scripts/collect.py --preflight   # 健康检查（5s）
 采集层（sources/）→ 预处理层（preprocess.py）→ 输出层 → 健康检查层（preflight.py）
 ```
 
-### 采集层（8 源并发，20s 总超时）
+### 采集层（8+1 源并发，20s 总超时）
 - **行情**：CoinGecko → Gate.io → OKX/Binance（三级 fallback）
 - **资金费率**：OKX 永续（BTC/ETH/SOL 年化）
 - **新闻**：RSS 3源 + 东方财富（加密过滤）并发合并
 - **社媒**：Telegram 7频道 + 币安广场(jina) + 老虎社区(直连HTML)
 - **宏观**：东方财富快讯 + 华尔街见闻 lives
+- **DogDoing 聚合**（新）：OI持仓量异动 · 恐惧贪婪指数 · Binance Alpha 热点 · 币安广场热度($TICKER) · 42.space 预测市场 · 美股板块（综合 dogdoing.ai 的 /api/* 代理，fail-soft）
 - 任一源失败不阻断其他源，全部失败输出空数组+failed 状态
 
 ### 预处理层
@@ -73,9 +81,9 @@ python3 scripts/collect.py --preflight   # 健康检查（5s）
 - **昨日热点存档**：hot_history.json 记录每日 top3，供次日生命周期追踪
 
 ### 健康检查层
-preflight.py 并发 ping 12 源，输出 ok/failed + 延迟 ms。
+preflight.py 并发 ping 18 源（含 6 个 DogDoing 探针），输出 ok/failed + 延迟 ms。
 
-## 日报模板（10段，固定结构）
+## 日报模板（11段，固定结构）
 
 ```
 【Web3行情热点日报｜M月D日】
@@ -92,9 +100,12 @@ preflight.py 并发 ping 12 源，输出 ok/failed + 延迟 ms。
    / 具体标的及可交易性 / 看多·看空论据各带数据 / 数据佐证
    / 内容切入点+所需素材 / 卡片三要素(标的·节点·用户)
 
-五、异动资产榜｜币种·涨跌幅·量比·触发事件·所处阶段(启动·加速·冲高回落)
+五、异动资产榜｜币种·涨跌幅·触发事件·所处阶段(启动·加速·冲高回落)
+   + 可补 DogDoing【OI持仓量异动】与【币安广场热度】作为"新资金进场/舆论爆发"佐证
 
 六、未来3天节点日历｜宏观数据·解锁·上线（待确认标注）
+   prompt 必须内置宏观日历（如 FOMC 9/15-16、10/27-28、12/8-9；CPI 月中；非农每月首周五），否则 AI 全写"待确认"
+   + 条件允许时参考 DogDoing【42.space 预测市场】热门事件作题材储备
 
 七、内容排期｜T+0轻内容(图文/推文/切片/快评) / T+3重内容(深度/圆桌/数据可视化)
    每档标注素材完备度
@@ -104,7 +115,34 @@ preflight.py 并发 ping 12 源，输出 ok/failed + 延迟 ms。
 九、待核实信息区｜未交叉验证传闻隔离（标"未确认"）
 
 十、合规红线清单｜固定附上
+
+十一、创作者速用包｜站外可直接发（v6 新增，服务小红书/抖音/X/视频号博主）
+   成品1 小红书图文：封面大字(≤12字钩子，猎奇/反常识/冲突优先)+标题+正文(150-250字
+      短促口语化、指名道姓+数据+冲突观点、禁"扣1"式引导)+标签8-10个+发布时段
+   成品2 X推文：观点型≤280字符，带数据+冲突观点
+   成品3 短视频口播：前3秒钩子+30秒口播要点(带具体数字)+画面提示
+   平台合规自查（必做）：点名具体币+操作指导倾向(低吸/追高/加仓/抄底)会被小红书判
+      高风险删帖 → 改写为"纯行业观察+个人口吻+免责声明"版本
+   【配图附件】charts.py 生成的 MEDIA: 路径（gainers/losers/sentiment.png）
 ```
+
+### DogDoing 扩展维度（v6.1 新增，非冗余补充）
+新增 `sources/dogdoing.py`，从 dogdoing.ai 的 /api/* 代理抓 6 个本管线不重复的维度：
+- **OI持仓量异动**（oi_divergence）：持仓量 vs 价格背离系数，用于发现"新资金进场但价格未跟"的异动
+- **恐惧贪婪指数**（fear_greed）：Value + Label（Extreme Fear/Greed 等）
+- **Binance Alpha 热点**（alpha_hotspots）：热点话题 + 净流入 + 类型，BSC chainId=56
+- **币安广场热度**（square_hype）：论坛 $TICKER 提及热度分 + 源数
+- **42.space 预测市场**（prediction_markets）：热门预测事件 + 成交量 + 状态
+- **美股板块**（us_stocks）：Mag7/热门股涨跌 + 关联新闻标题
+
+全部 fail-soft：任一端点失败不影响其他，全部失败才把 source_health.dogdoing 标为 failed。
+数据量已裁剪（OI/热点/热度各取 Top10，预测市场 Top5，美股 Top8），避免 JSON 膨胀。
+
+### charts.py 配图生成（v6.1 新增 DogDoing 图）
+- 输出：`charts/YYYYMMDD/gainers.png`（24h涨幅榜Top10）、`losers.png`（跌幅榜）、`sentiment.png`（情绪词频）
+- DogDoing 扩展图（v6.1）：`oi.png`（OI持仓量异动·价格vs持仓）、`fear_greed.png`（恐惧贪婪指数·0-100指示条）、`stocks.png`（美股板块·Mag7/热门）
+- 中文渲染依赖系统 CJK 字体（Ubuntu 文泉驿正黑），matplotlib findfont 的 weight 警告可忽略
+- 颜色约定：红涨绿跌（中文用户习惯），改 charts.py 顶部 COLOR_UP/COLOR_DOWN 可切币圈绿涨红跌
 
 ### 热点评分模型（分项可复用可对比）
 - 社媒声量 0-2.5 / 成交量变化 0-2.5 / 价格波动 0-2.5 / 媒体覆盖 0-2.5 = 满分10
@@ -129,6 +167,7 @@ preflight.py 并发 ping 12 源，输出 ok/failed + 延迟 ms。
 - **scripts/symbol_map.json**：37 资产，symbol+CoinGecko id+alias（GRAM→TON/RNDR→RENDER/MATIC→POL/FTM→S），PEPE/BONK 精度
 - **scripts/tags.json**：关键词标签字典
 - **scripts/hot_history.json**：自动生成，昨日热点存档
+- **scripts/sources/dogdoing.py**：DogDoing 扩展维度采集（6 端点，fail-soft），无需配置
 
 ## 已知限制
 
@@ -136,11 +175,12 @@ preflight.py 并发 ping 12 源，输出 ok/failed + 延迟 ms。
 - ETF流向/爆仓量无免费API，从新闻中提取（提取不到标"暂无数据"）
 - 中英文源内容域不同时交叉验证可能为 0（正常，非 bug）
 - 中文媒体（PANews/律动/深潮）关闭 TG 网页预览
+- DogDoing 维度依赖其公开 /api/* 代理（Next.js），若其限流/变更接口字段或整体下线，dogdoing 块自动报 failed，其余源不受影响（fail-soft）
 
 ## 环境要求
 
-- Python 3.8+（纯标准库）
-- 网络可访问：api.coingecko.com / data.gateapi.io / api.okx.com / api.binance.com / r.jina.ai / np-listapi.eastmoney.com / api-one-wscn.awtmt.com / t.me / www.laohu8.com / RSS 源
+- Python 3.8+（纯标准库；charts.py 需 matplotlib，已在 Hermes venv 安装）
+- 网络可访问：api.coingecko.com / data.gateapi.io / api.okx.com / api.binance.com / r.jina.ai / np-listapi.eastmoney.com / api-one-wscn.awtmt.com / t.me / www.laohu8.com / dogdoing.ai / RSS 源
 
 ## 配置清单
 

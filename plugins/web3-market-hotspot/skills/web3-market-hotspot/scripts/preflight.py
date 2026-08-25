@@ -18,6 +18,12 @@ PROBES = {
     "telegram": "https://t.me/s/wublock",
     "jina": "https://r.jina.ai/https://www.binance.com/zh-CN/square",
     "laohu": "https://www.laohu8.com/community",
+    "dogdoing_fear_greed": "https://dogdoing.ai/api/fear-greed",
+    "dogdoing_oi": "https://dogdoing.ai/api/oi-divergence",
+    "dogdoing_hotspots": "https://dogdoing.ai/api/hotspots?chainId=56&rankType=",
+    "dogdoing_square_hype": "https://dogdoing.ai/api/square-hype",
+    "dogdoing_predict": "https://dogdoing.ai/api/prediction-markets?limit=1",
+    "dogdoing_us_stocks": "https://dogdoing.ai/api/us-stocks",
 }
 
 
@@ -34,7 +40,7 @@ def ping(name, url):
 
 def main():
     results = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as ex:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as ex:
         futs = {ex.submit(ping, n, u): n for n, u in PROBES.items()}
         try:
             for f in concurrent.futures.as_completed(futs, timeout=10):

@@ -19,6 +19,7 @@ from sources.news import fetch_news_chain
 from sources.social import fetch_social_chain
 from sources.macro import fetch_macro_chain
 from sources.funding import FundingRates, count_sentiment
+from sources.dogdoing import fetch_dogdoing_chain
 import preprocess
 import hot_history
 
@@ -41,14 +42,16 @@ def run_all():
         f_social = ex.submit(fetch_social_chain)
         f_macro = ex.submit(fetch_macro_chain)
         f_funding = ex.submit(FundingRates().fetch)
+        f_dogdoing = ex.submit(fetch_dogdoing_chain)
 
         try:
-            market_r, news_r, social_r, macro_r, funding_r = (
+            market_r, news_r, social_r, macro_r, funding_r, dogdoing_r = (
                 f_market.result(timeout=20),
                 f_news.result(timeout=20),
                 f_social.result(timeout=20),
                 f_macro.result(timeout=20),
                 f_funding.result(timeout=20),
+                f_dogdoing.result(timeout=20),
             )
         except concurrent.futures.TimeoutError:
             log("!! 20s timeout, using partial results")
@@ -57,6 +60,7 @@ def run_all():
             social_r = {"status": "timeout", "data": []}
             macro_r = {"status": "timeout", "data": []}
             funding_r = {"status": "timeout", "data": {}}
+            dogdoing_r = {"status": "timeout", "data": {}}
 
     # social 链返回 (result, per-source status) 或直接 result
     if isinstance(social_r, tuple):
@@ -70,11 +74,12 @@ def run_all():
     log(f"social: {social_result['status']} ({len(social_result.get('data', []))} items)")
     log(f"macro: {macro_r['status']} ({len(macro_r.get('data', []))} items)")
     log(f"funding: {funding_r['status']}")
+    log(f"dogdoing: {dogdoing_r['status']} ({len(dogdoing_r.get('data', {}))} blocks)")
 
-    return market_r, news_r, social_result, macro_r, social_status, funding_r
+    return market_r, news_r, social_result, macro_r, social_status, funding_r, dogdoing_r
 
 
-def build_output(market_r, news_r, social_r, macro_r, social_status, funding_r):
+def build_output(market_r, news_r, social_r, macro_r, social_status, funding_r, dogdoing_r):
     market = market_r.get("data", {})
     news_items = news_r.get("data", [])
     social_items = social_r.get("data", [])
@@ -98,6 +103,7 @@ def build_output(market_r, news_r, social_r, macro_r, social_status, funding_r):
         "news": news_r["status"],
         "social": social_r["status"],
         "macro": macro_r["status"],
+        "dogdoing": dogdoing_r["status"],
         "fallback_used": {
             "market": market_r.get("fallback_used", ""),
             "news": news_r.get("fallback_used", ""),
@@ -125,6 +131,7 @@ def build_output(market_r, news_r, social_r, macro_r, social_status, funding_r):
         "social_archive": social_archived,
         "macro": macro_clean,
         "macro_archive": macro_archived,
+        "dogdoing": dogdoing_r.get("data", {}),
     }
     return out
 
@@ -146,8 +153,8 @@ def main():
         return
 
     t0 = time.time()
-    market_r, news_r, social_r, macro_r, social_status, funding_r = run_all()
-    out = build_output(market_r, news_r, social_r, macro_r, social_status, funding_r)
+    market_r, news_r, social_r, macro_r, social_status, funding_r, dogdoing_r = run_all()
+    out = build_output(market_r, news_r, social_r, macro_r, social_status, funding_r, dogdoing_r)
 
     if not args.json_only:
         # stderr 人类可读摘要
