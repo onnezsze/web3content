@@ -134,6 +134,70 @@ def build_data_cards(market, funding, news_items, precomputed):
     return cards[:12]
 
 
+def circle_dynamics(news_items, social_items, macro_items, top=10):
+    """圈内动态：定向监测 交易所 / 链·生态 / 交易所老板高管 / 孙哥(孙宇晨) / 币圈KOL / 特朗普(加密相关)。
+    从新闻+社媒+宏观里按主体关键词打分，返回 [{title, summary, src, kind}]。"""
+    CIRCLE_ENTITY = {
+        "孙哥/孙宇晨": ["孙宇晨", "孙哥", "justin sun", "波场", "tron"],
+        "交易所老板高管": ["cz", "赵长鹏", "brian armstrong", "richard teng", "coinbase ceo", "binance ceo",
+                         "创始人", "高管", "董事长"],
+        "币圈KOL": ["arthur hayes", "分析师", "大佬", "巨鲸", "whale", "vitalik", "v神", "马斯克", "喊单"],
+        "特朗普/监管": ["特朗普", "trump", "美财", "财政部", "制裁", "sec", "监管", "白宫", "参议院", "灰度"],
+        "交易所": ["binance", "币安", "okx", "欧易", "coinbase", "交易所", "上币", "上架", "下架", "暂停交易",
+                  "上市", "现货", "合约", "bybit", "bitget", "gate", "kucoin"],
+        "链/生态": ["主网", "mainnet", "layer2", "l2", "base", "arbitrum", "solana", "ethereum", "以太坊",
+                   "生态", "tvl", "链上", "安全事件", "漏洞", "升级", "空投"],
+    }
+    HIGH_SIGNAL = ["孙宇晨", "cz", "trump", "特朗普", "安全事件", "空投", "下架", "暂停", "上架", "etf",
+                   "加仓", "上市", "主网", "制裁", "币安", "coinbase", "okx", "空投", "卖出", "买入"]
+    pool = []
+    for it in news_items:
+        pool.append({"title": it.get("title", ""), "text": it.get("text", it.get("title", "")),
+                     "src": it.get("src", "?"), "kind": "新闻"})
+    for it in social_items:
+        pool.append({"title": it.get("title", it.get("text", "")), "text": it.get("text", it.get("title", "")),
+                     "src": it.get("src", it.get("channel", "?")), "kind": "社媒"})
+    for it in macro_items:
+        pool.append({"title": it.get("title", ""), "text": it.get("text", it.get("title", "")),
+                     "src": it.get("src", "?"), "kind": "宏观"})
+
+    def score(it):
+        t = (it["title"] + " " + it["text"]).lower()
+        s = sum(1 for grp, kws in CIRCLE_ENTITY.items() if any(k.lower() in t for k in kws))
+        s += 2 * sum(1 for k in HIGH_SIGNAL if k.lower() in t)
+        if any(k.lower() in it["title"].lower() for k in HIGH_SIGNAL):
+            s += 1
+        return s
+
+    for it in pool:
+        it["score"] = score(it)
+    # 加密相关性门控：必须含加密关键词，过滤无关股市/政治/关税
+    CRYPTO_KW = ["btc", "bitcoin", "eth", "ethereum", "加密", "crypto", "coinbase", "binance", "币安", "okx",
+                 "欧易", "token", "代币", "稳定币", "stablecoin", "tron", "波场", "solana", "etf", "交易所",
+                 "合约", "现货", "主网", "链上", "数字资产", "defi", "nft", "meme", "web3", "doge", "xrp"]
+    cand = sorted([it for it in pool
+                   if it["score"] >= 3 and any(k in (it["title"] + " " + it["text"]).lower() for k in CRYPTO_KW)],
+                  key=lambda x: x["score"], reverse=True)
+
+    # 标题去重
+    seen, out = set(), []
+    for it in cand:
+        k = re.sub(r"[^\w]", "", it["title"][:36]).lower()
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append(it)
+        if len(out) >= top:
+            break
+    res = []
+    for it in out:
+        summary = it["text"].strip()
+        if not summary:
+            summary = it["title"]
+        res.append({"title": it["title"][:90], "summary": summary[:150], "src": it["src"], "kind": it["kind"]})
+    return res
+
+
 def main():
     r = subprocess.run([sys.executable, os.path.join(BASE, "collect.py"), "--json-only"],
                        capture_output=True, text=True, timeout=120, cwd=BASE)
@@ -264,6 +328,18 @@ def main():
     macro_clean = [n for n in macro_items if not is_macro_noise(n.get("title", ""))]
     for n in macro_clean[:10]:
         print(f"  [{n.get('src','?')}] {n['title'][:90]}")
+
+    # 12.5 圈内动态（交易所/链·生态/老板高管/孙哥/币圈KOL/特朗普）
+    print()
+    print("## 圈内动态（交易所 · 链·生态 · 老板高管 · 孙哥 · 币圈KOL · 特朗普）")
+    cd = circle_dynamics(news_items, social_items, macro_clean)
+    if cd:
+        for i, it in enumerate(cd, 1):
+            print(f"  {i}. {it['title']}")
+            print(f"     摘要：{it['summary']}")
+            print(f"     来源：{it['src']}")
+    else:
+        print("  （今日无显著圈内动态）")
 
     # 13. DogDoing 扩展维度（非冗余：OI异动/恐惧贪婪/Alpha热点/广场热度/预测市场/美股）
     dd = d.get("dogdoing", {}) or {}
