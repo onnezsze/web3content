@@ -83,6 +83,10 @@ def _clean(s):
     """去掉 markdown 加粗/斜体星号噪音"""
     return s.replace("**", "").replace("__", "").replace("~~", "")
 
+def _strip_paren(s):
+    """去掉标题结尾的括号说明，如 "创作者怎么用（按角色…）" → "创作者怎么用" """
+    return re.sub(r"[（(][^)）]*[)）]\s*$", "", s).strip()
+
 def parse_to_blocks(text):
     blocks = []
     emoji_headers = ("🔥", "📌", "💡", "⚠️", "🎯", "📊", "🔍")
@@ -105,17 +109,21 @@ def parse_to_blocks(text):
         if not s:
             continue
         if s.startswith("### "):
-            blocks.append({"block_type": 5, "heading3": {"elements": [text_run(_clean(s[4:]), True)]}})
+            blocks.append({"block_type": 5, "heading3": {"elements": [text_run(_clean(_strip_paren(s[4:])), True)]}})
         elif s.startswith("## "):
-            blocks.append({"block_type": 4, "heading2": {"elements": [text_run(_clean(s[3:]), True)]}})
+            blocks.append({"block_type": 4, "heading2": {"elements": [text_run(_clean(_strip_paren(s[3:])), True)]}})
         elif s.startswith("# "):
-            blocks.append({"block_type": 3, "heading1": {"elements": [text_run(_clean(s[2:]), True)]}})
+            blocks.append({"block_type": 3, "heading1": {"elements": [text_run(_clean(_strip_paren(s[2:])), True)]}})
         elif s.startswith(emoji_headers):
-            blocks.append({"block_type": 4, "heading2": {"elements": [text_run(_clean(s), True)]}})
+            blocks.append({"block_type": 4, "heading2": {"elements": [text_run(_clean(_strip_paren(s)), True)]}})
         elif s.startswith("> "):
             blocks.append({"block_type": 15, "quote": {"elements": [text_run(_clean(s[2:]))]}})
         elif s.startswith(("· ", "• ", "- ", "* ")):
             blocks.append({"block_type": 12, "bullet": {"elements": [text_run(_clean(s[2:]))]}})
+        elif re.match(r"^\d+[\.、]\s", s):
+            blocks.append({"block_type": 2, "text": {"elements": [text_run(_clean(s), True)]}})
+        elif s.startswith("👤"):
+            blocks.append({"block_type": 2, "text": {"elements": [text_run(_clean(s), True)]}})
         elif len(s) > 2 and s[0] == "#" and s[1].isdigit():
             blocks.append({"block_type": 2, "text": {"elements": [text_run(_clean(s), True)]}})
         else:
@@ -180,16 +188,29 @@ def main():
     embed_charts = "--no-charts" not in args
     if "--text" in args:
         with open(args[args.index("--text") + 1], encoding="utf-8") as f:
-            report_text = f.read()
+            raw_text = f.read()
     else:
-        report_text = run_report()
+        raw_text = run_report()
 
-    title = f"Web3行情热点日报 {datetime.now().strftime('%m月%d日')}"
+    # 标题取自内容首行，并移出正文，避免"文档标题+正文标题"重复
+    lines = raw_text.splitlines()
+    first = next((ln.strip() for ln in lines if ln.strip()), "")
+    report_text = raw_text
+    if first.startswith("# "):
+        doc_title = _clean(first[2:]).strip()
+        report_text = "\n".join(lines[1:])
+    elif first.startswith("【") and first.endswith("】"):
+        doc_title = _clean(first.strip("【】")).strip()
+        report_text = "\n".join(lines[1:])
+    else:
+        doc_title = f"Web3 · 美股 内容创作者热点简报 {datetime.now().strftime('%m月%d日')}"
+    doc_title = doc_title.replace(" | ", " · ")
+
     blocks = parse_to_blocks(report_text)
     print(f"parsed {len(blocks)} blocks")
 
     tok = token()
-    doc_id = create_doc(tok, title)
+    doc_id = create_doc(tok, doc_title)
     print(f"created doc {doc_id}")
 
     # 正文
