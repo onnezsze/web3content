@@ -86,9 +86,22 @@ def _clean(s):
 def parse_to_blocks(text):
     blocks = []
     emoji_headers = ("🔥", "📌", "💡", "⚠️", "🎯", "📊")
+    in_code = False
+    code_lines = []
     for raw in text.splitlines():
         line = raw.rstrip()
         s = line.strip()
+        if s.startswith("```"):
+            if in_code:
+                blocks.append({"block_type": 14, "code": {"elements": [{"text_run": {"content": "\n".join(code_lines)}}]}})
+                code_lines = []
+                in_code = False
+            else:
+                in_code = True
+            continue
+        if in_code:
+            code_lines.append(line)
+            continue
         if not s:
             continue
         if s.startswith("### "):
@@ -108,6 +121,8 @@ def parse_to_blocks(text):
         else:
             bold = "**" in s
             blocks.append({"block_type": 2, "text": {"elements": [text_run(_clean(s), bold)]}})
+    if in_code and code_lines:
+        blocks.append({"block_type": 14, "code": {"elements": [{"text_run": {"content": "\n".join(code_lines)}}]}})
     return blocks
 
 def create_doc(tok, title):
