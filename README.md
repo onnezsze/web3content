@@ -2,7 +2,7 @@
 name: web3-market-hotspot
 description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区），JSON结构化输出（异动预计算、交叉验证、情绪词频、昨日热点存档、健康检查），10段式日报模板服务内容运营与KOL创作。"
 version: 5.0.0
-author: Lucas + Hermes Agent
+author: Lucas Wang
 license: MIT
 platforms: [linux, macos]
 metadata:
