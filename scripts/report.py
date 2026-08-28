@@ -375,9 +375,33 @@ def weekly_review(news_items, social_items, macro_items, top=8):
             coming.append({"title": title[:110],
                            "src": n.get("src", n.get("channel", "?")),
                            "text": (n.get("text", "") or title)[:160]})
-    strong = ["将于", "下周", "听证", "CPI", "非农", "议息", "unlock", "launch",
-              "earnings", "hearing", "fomc", "TGE", "空投", "主网", "升级", "交割", "到期"]
-    coming.sort(key=lambda x: (0 if any(k in x["title"] for k in strong) else 1, -len(x["title"])))
+    # ③ 下周可预估热点：三级优先级排序（①美联储/宏观数据/美股明星财报 ②主流加密币 ③其他）
+    def _tier(c):
+        s = (c["title"] + " " + c.get("text", "")).lower()
+        # ① 美联储动态/宏观数据
+        macro = ["fomc", "美联储", "加息", "降息", "利率", "cpi", "非农", "就业", "失业", "pce", "通胀"]
+        if any(k in s for k in macro):
+            return 1
+        # ① 美股明星股财报动态（明星公司+财报；或明确美股财报）
+        star = ["nvidia", "英伟达", "apple", "苹果", "tesla", "特斯拉", "microsoft", "微软",
+                "google", "alphabet", "amd", "tsmc", "台积电", "maga7", "netflix", "amazon", "meta"]
+        if any(k in s for k in star) and any(k in s for k in ["财报", "earnings", "beat", "miss", "guidance", "业绩"]):
+            return 1
+        if any(k in s for k in ["财报", "earnings"]) and any(k in s for k in ["美股", "nasdaq", "nyse", "美国"]):
+            return 1
+        # ② 主流加密货币币种
+        t2 = ["btc", "bitcoin", "比特币", "eth", "ethereum", "以太坊", "sol", "solana", "meme",
+              "doge", "pepe", "shib", "wif", "bonk", "xrp", "bnb", "ton", "trx", "link",
+              "avax", "ada", "sui", "apt", "ena", "jup", "uni"]
+        if any(k in s for k in t2):
+            return 2
+        return 3
+
+    def _datey(c):
+        s = c["title"] + c.get("text", "")
+        return 0 if any(k in s for k in ["将于", "下周", "本月", "本周", "听证", "财报", "CPI",
+                                         "非农", "议息", "FOMC", "unlock", "launch", "earnings"]) else 1
+    coming.sort(key=lambda x: (_tier(x), _datey(x), -len(x["title"])))
 
     return {"week_hotspots": week_hotspots[:top], "coming": coming[:top]}
 
