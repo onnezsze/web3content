@@ -2,7 +2,7 @@
 """精简报告模式 v3：AI 可直接用的结构化文本
 含：精确事件匹配、宏观过滤、KOL观点、反差素材榜、数据卡"""
 import subprocess, sys, os, json, re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
@@ -254,6 +254,54 @@ def circle_dynamics(news_items, social_items, macro_items, top=5, extra_items=No
     return res
 
 
+def weekly_review(news_items, social_items, macro_items, top=8):
+    """周度回顾(周一简报专属)：上周热点回顾 + 本周可预估热点候选。
+    返回 {"week_review": [{date,title,score}...], "coming": [{title,src,text}...]}
+    上周热点来自 hot_history.json(近7天每日top3)；本周预估来自新闻/社媒/宏观中的前瞻事件。"""
+    hist_path = os.path.join(BASE, "hot_history.json")
+    try:
+        with open(hist_path) as f:
+            hist = json.load(f)
+    except Exception:
+        hist = {}
+
+    # ① 上周热点回顾：近7天每日 top3
+    week_review = []
+    cutoff = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+    for d in sorted([k for k in hist if k >= cutoff], reverse=True):
+        for t in hist.get(d, [])[:3]:
+            week_review.append({"date": d, "title": str(t.get("title", ""))[:90],
+                                "score": t.get("score", "?")})
+
+    # ② 本周可预估热点：前瞻关键词扫描
+    fwd_kw = ["将于", "下周", "本月", "本周", "明日", "届时", "解锁", "上线", "暂定",
+              "举行", "发布会", "公布", "听证会", "投票", "CPI", "非农", "议息",
+              "利率决议", "财报", "交割", "到期", "TGE", "空投", "主网", "升级",
+              "mainnet", "launch", "unlock", "earnings", "hearing", "fomc", "vote",
+              "proposal", "expiry", "upgrade", "halving", "snapshot", "summary"]
+    coming = []
+    seen = set()
+    for n in list(news_items) + list(social_items) + list(macro_items):
+        title = n.get("title", "") or n.get("text", "")
+        if not title:
+            continue
+        low = (title + " " + n.get("text", "")).lower()
+        if any(k.lower() in low for k in fwd_kw):
+            key = title[:50]
+            if key in seen:
+                continue
+            seen.add(key)
+            coming.append({"title": title[:110],
+                           "src": n.get("src", n.get("channel", "?")),
+                           "text": (n.get("text", "") or title)[:160]})
+    # 明确带走"将于/下周/具体日期"的排前
+    strong = ["将于", "下周", "听证", "CPI", "非农", "议息", "unlock", "launch",
+              "earnings", "hearing", "fomc", "TGE", "空投", "主网", "升级", "交割", "到期"]
+    coming.sort(key=lambda x: (0 if any(k in x["title"] for k in strong) else 1, -len(x["title"])))
+
+    return {"week_review": week_review[:top], "coming": coming[:top]}
+
+
 def main():
     r = subprocess.run([sys.executable, os.path.join(BASE, "collect.py"), "--json-only"],
                        capture_output=True, text=True, timeout=120, cwd=BASE)
@@ -417,6 +465,25 @@ def main():
             print(f"     来源：{it['src']} · {it['kind']}")
     else:
         print("  （今日无显著圈内动态）")
+
+    # 12.8 周度回顾（仅周一简报：上周热点回顾 + 本周可预估热点）
+    if datetime.now().weekday() == 0:
+        wr = weekly_review(news_items, social_items, macro_clean)
+        print()
+        print("## 周度回顾（周一简报专属 · 上周回顾 + 本周预估）")
+        print("  【上周热点回顾】")
+        if wr["week_review"]:
+            for it in wr["week_review"]:
+                print(f"    {it['date']} {it['title']}（评分{it['score']}）")
+        else:
+            print("    （上周历史不足，暂无可回顾热点）")
+        print("  【本周可预估热点候选】")
+        if wr["coming"]:
+            for it in wr["coming"]:
+                print(f"    · {it['title']}  [来源:{it['src']}]")
+        else:
+            print("    （暂未识别到明确预告事件）")
+        print()
 
     # 13. DogDoing 扩展维度（非冗余：OI异动/恐惧贪婪/Alpha热点/广场热度/预测市场/美股）
     dd = d.get("dogdoing", {}) or {}
