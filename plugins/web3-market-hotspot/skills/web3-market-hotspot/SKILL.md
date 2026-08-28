@@ -5,6 +5,7 @@ version: 7.16.0
 author: Lucas + Hermes Agent
 license: MIT
 platforms: [linux, macos]
+binaries: ['.gitignore', 'gitignore']
 metadata:
   hermes:
     tags: [web3, crypto, market-analysis, hot-topic, content-ops, koi, creator, news-aggregation]
