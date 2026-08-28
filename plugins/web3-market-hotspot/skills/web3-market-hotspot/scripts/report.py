@@ -134,22 +134,33 @@ def build_data_cards(market, funding, news_items, precomputed):
     return cards[:12]
 
 
-def circle_dynamics(news_items, social_items, macro_items, top=5):
-    """圈内动态：监测 交易所 / 链·生态 / 交易所老板高管 / 孙哥(孙宇晨) / 币圈KOL / 特朗普(加密相关)。
-    按优先级(孙哥>特朗普>交易所>老板高管>币圈KOL>链/生态)+重要程度筛选，返回 top 条 [{title, summary, src, kind}]。"""
+def circle_dynamics(news_items, social_items, macro_items, top=5, extra_items=None):
+    """圈内动态(2026-08 扩版)：监测 孙哥(孙宇晨,含八卦·最高优先) / 特朗普(加密相关) / 交易所 / 交易所老板高管 /
+    币圈大V·名人(动态/八卦/言论/活动) / 链·生态。命中监测主体即可入选(不限于加密关键词)，
+    用于抓名人八卦、老板言论、活动传闻；extra_items 可传入 DogDoing Alpha 热点等额外源。
+    按优先级(孙哥>特朗普>交易所>老板高管>币圈大V>链/生态)+重要程度筛选，返回 top 条。"""
     CIRCLE_ENTITY = {
-        "孙哥/孙宇晨": ["孙宇晨", "孙哥", "justin sun", "波场", "tron"],
+        "孙哥/孙宇晨": ["孙宇晨", "孙哥", "孙割", "justin sun", "波场", "tron", "htx", "火币", "trx"],
         "交易所老板高管": ["cz", "赵长鹏", "brian armstrong", "richard teng", "coinbase ceo", "binance ceo",
-                         "创始人", "高管", "董事长"],
-        "币圈KOL": ["arthur hayes", "分析师", "大佬", "巨鲸", "whale", "vitalik", "v神", "马斯克", "喊单"],
-        "特朗普/监管": ["特朗普", "trump", "美财", "财政部", "制裁", "sec", "监管", "白宫", "参议院", "灰度"],
+                         "创始人", "高管", "董事长", "孙宇晨"],
+        "币圈大V/名人": ["arthur hayes", "vitalik", "v神", "马斯克", "musk", "cz", "孙宇晨", "分析师", "大佬",
+                        "巨鲸", "whale", "喊单", "kelly", "crypto daily", "bankless", "coin bureau", "gabor",
+                        "唐小僧", "凉兮", "梭教授"],
+        "特朗普/监管": ["特朗普", "trump", "美财", "财政部", "制裁", "sec", "监管", "白宫", "参议院", "灰度",
+                       "world liberty", "worldliberty"],
         "交易所": ["binance", "币安", "okx", "欧易", "coinbase", "交易所", "上币", "上架", "下架", "暂停交易",
-                  "上市", "现货", "合约", "bybit", "bitget", "gate", "kucoin"],
+                  "上市", "现货", "合约", "bybit", "bitget", "gate", "kucoin", "htx", "火币"],
         "链/生态": ["主网", "mainnet", "layer2", "l2", "base", "arbitrum", "solana", "ethereum", "以太坊",
-                   "生态", "tvl", "链上", "安全事件", "漏洞", "升级", "空投"],
+                   "生态", "tvl", "链上", "安全事件", "漏洞", "升级", "空投", "回购", "发起"],
     }
-    HIGH_SIGNAL = ["孙宇晨", "cz", "trump", "特朗普", "安全事件", "空投", "下架", "暂停", "上架", "etf",
-                   "加仓", "上市", "主网", "制裁", "币安", "coinbase", "okx", "空投", "卖出", "买入"]
+    # 动态/八卦/言论/活动 信号词：命中监测主体时加分，用于抓名人八卦、老板言论、活动/传闻
+    EVENT_KW = ["绯闻", "恋爱", "婚", "分手", "传闻", "被曝", "辟谣", "回应", "热搜", "爆料", "官宣", "宣布",
+                "出席", "演讲", "会见", "发表", "称", "表示", "谈到", "喊单", "晒", "反转", "瓜", "骂", "争论",
+                "离职", "入职", "收购", "起诉", "指控", "涉嫌", "冻结", "警告", "调查", "开庭", "喊话", "发声",
+                "表态", "怒怼", "讽刺", "开撕", "空头", "号召"]
+    HIGH_SIGNAL = ["孙宇晨", "孙哥", "孙割", "cz", "trump", "特朗普", "安全事件", "空投", "下架", "暂停", "上架",
+                   "etf", "加仓", "上市", "主网", "制裁", "币安", "coinbase", "okx", "卖出", "买入", "绯闻", "热搜",
+                   "爆料", "辟谣", "官宣", "回应", "恋爱", "起诉"]
     pool = []
     for it in news_items:
         pool.append({"title": it.get("title", ""), "text": it.get("text", it.get("title", "")),
@@ -160,6 +171,8 @@ def circle_dynamics(news_items, social_items, macro_items, top=5):
     for it in macro_items:
         pool.append({"title": it.get("title", ""), "text": it.get("text", it.get("title", "")),
                      "src": it.get("src", "?"), "kind": "宏观"})
+    for it in (extra_items or []):
+        pool.append(it)
 
     def score(it):
         t = (it["title"] + " " + it["text"]).lower()
@@ -167,10 +180,13 @@ def circle_dynamics(news_items, social_items, macro_items, top=5):
         s += 2 * sum(1 for k in HIGH_SIGNAL if k.lower() in t)
         if any(k.lower() in it["title"].lower() for k in HIGH_SIGNAL):
             s += 1
+        # 命中监测主体 + 动态/八卦/言论/活动信号 → 每个事件词 +1（抓名人八卦、老板言论、活动传闻）
+        if any(k.lower() in t for kws in CIRCLE_ENTITY.values() for k in kws):
+            s += sum(1 for k in EVENT_KW if k.lower() in t)
         return s
 
     PRIORITY = {"孙哥/孙宇晨": 1, "特朗普/监管": 2, "交易所": 3, "交易所老板高管": 4,
-                "币圈KOL": 5, "链/生态": 6}
+                "币圈大V/名人": 5, "链/生态": 6}
 
     def priority(it):
         t = (it["title"] + " " + it["text"]).lower()
@@ -181,12 +197,15 @@ def circle_dynamics(news_items, social_items, macro_items, top=5):
         it["score"] = score(it)
         it["priority"] = priority(it)
 
-    # 加密相关性门控：必须含加密关键词，过滤无关股市/政治/关税
+    # 门控(放宽版)：命中监测主体即可入选(不限加密关键词，用于抓名人八卦/言论/活动)；或含加密关键词；否则过滤(股市/关税/纯娱乐噪音)
     CRYPTO_KW = ["btc", "bitcoin", "eth", "ethereum", "加密", "crypto", "coinbase", "binance", "币安", "okx",
                  "欧易", "token", "代币", "稳定币", "stablecoin", "tron", "波场", "solana", "etf", "交易所",
                  "合约", "现货", "主网", "链上", "数字资产", "defi", "nft", "meme", "web3", "doge", "xrp"]
+    def _entity_hit(t):
+        return any(k.lower() in t for kws in CIRCLE_ENTITY.values() for k in kws)
     cand = [it for it in pool
-            if it["score"] >= 3 and any(k in (it["title"] + " " + it["text"]).lower() for k in CRYPTO_KW)]
+            if it["score"] >= 2 and (_entity_hit((it["title"] + " " + it["text"]).lower())
+                                     or any(k in (it["title"] + " " + it["text"]).lower() for k in CRYPTO_KW))]
     # 按优先级(小=高)再按重要程度(score 降序)排序
     cand.sort(key=lambda x: (x["priority"], -x["score"]))
 
@@ -340,15 +359,26 @@ def main():
     for n in macro_clean[:10]:
         print(f"  [{n.get('src','?')}] {n['title'][:90]}")
 
-    # 12.5 圈内动态（按优先级+重要程度取前5）
+    # 12.5 圈内动态（按优先级+重要程度取前5；含 DogDoing Alpha 热点等额外源）
     print()
     print("## 圈内动态")
-    cd = circle_dynamics(news_items, social_items, macro_clean)
+    dd_circle = d.get("dogdoing", {}) or {}
+    alpha_items = []
+    _ah = dd_circle.get("alpha_hotspots")
+    _ah = _ah.get("data") if isinstance(_ah, dict) and isinstance(_ah.get("data"), list) else None
+    if _ah:
+        for it in _ah:
+            nm = it.get("name", "")
+            if nm:
+                alpha_items.append({"title": f"[Alpha] {nm}",
+                                    "text": f"Binance Alpha 热点「{nm}」（{it.get('type','?')} · 净流入 {it.get('netInflow','?')} · 代币x{it.get('tokenSize','?')}）",
+                                    "src": "Binance Alpha", "kind": "Alpha热点"})
+    cd = circle_dynamics(news_items, social_items, macro_clean, extra_items=alpha_items)
     if cd:
         for i, it in enumerate(cd, 1):
             print(f"  {i}. {it['title']}")
             print(f"     摘要：{it['summary']}")
-            print(f"     来源：{it['src']}")
+            print(f"     来源：{it['src']} · {it['kind']}")
     else:
         print("  （今日无显著圈内动态）")
 
