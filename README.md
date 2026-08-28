@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区），JSON结构化输出（异动预计算、交叉验证、情绪词频、昨日热点存档、健康检查），10段式日报模板服务内容运营与KOL创作。"
-version: 7.5.0
+version: 7.6.0
 author: Lucas Wang
 license: MIT
 platforms: [linux, macos]
@@ -147,6 +147,10 @@ preflight.py 并发 ping 12 源，输出 ok/failed + 延迟 ms。
 无需 API key，开箱即用。
 
 ## 变更记录（Changelog）
+
+### v7.6.0 · 今日要闻优先级（2026-08）
+- 今日要闻按三级优先级排序：① 监管/合规/政府动作/宏观市场（最高）② 主流币(BTC/ETH) ③ 美股三大指数、各大板块、MAG7、AI 公司、存储、芯片。
+- report.py 新增 `top_news()`，输出「今日要闻候选(按优先级)」；同优先级按交叉验证 + 标题信息量排序。
 
 ### v7.5.0 · 圈内动态扩版（2026-08）
 - **监测主体扩充**：孙哥(孙宇晨)加「孙割 / HTX / 火币 / TRX」；新增「币圈大V / 名人」组（Arthur Hayes / 马斯克 / V神 / CZ / 唐小僧 / 凉兮 / 梭教授等）；交易所加 HTX / 火币；特朗普加 World Liberty。

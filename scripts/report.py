@@ -134,6 +134,32 @@ def build_data_cards(market, funding, news_items, precomputed):
     return cards[:12]
 
 
+def top_news(news_items, top=5):
+    """今日要闻候选，按优先级排序：①监管/合规/政府动作/宏观市场(最高) ②主流币(BTC/ETH) ③美股指数·板块·MAG7·AI·存储·芯片。
+    返回按优先级+重要程度(交叉验证/标题长度)排序的 top 条。"""
+    T1 = ["监管", "合规", "sec", "cftc", "央行", "财政部", "白宫", "政府", "法案", "听证", "制裁", "起诉",
+          "调查", "国会", "美联储", "fed", "利率", "降息", "加息", "关税", "gdp", "cpi", "非农", "美债",
+          "禁令", "regulator", "regulation", "compliance", "ban", "congress", "chairman"]
+    T2 = ["btc", "bitcoin", "比特币", "eth", "ethereum", "以太坊", "solana", "主流币"]
+    T3 = ["标普", "纳斯达克", "道琼斯", "sp500", "s&p", "nasdaq", "dow", "mag7", "mag 7", "英伟达", "nvidia",
+          "openai", "anthropic", "微软", "microsoft", "苹果", "apple", "谷歌", "google", "meta", "亚马逊",
+          "amazon", "特斯拉", "tesla", "台积电", "tsmc", "芯片", "chip", "半导体", "semis", "存储", "memory",
+          "hbm", "sk hynix", "美光", "micron", "amd", "博通", "broadcom", "英特尔", "intel", "ai公司", "ai教"]
+    def tier(it):
+        t = (it.get("title", "") + " " + it.get("text", "") + " " + it.get("summary", "")).lower()
+        if any(k in t for k in T1):
+            return 1
+        if any(k in t for k in T2):
+            return 2
+        if any(k in t for k in T3):
+            return 3
+        return 99
+    ranked = [it for it in news_items if tier(it) <= 3]
+    # 优先级(小=高) → 交叉验证 → 标题信息量
+    ranked.sort(key=lambda it: (tier(it), -int(bool(it.get("cross_verified"))), -len(it.get("title", ""))))
+    return ranked[:top]
+
+
 def circle_dynamics(news_items, social_items, macro_items, top=5, extra_items=None):
     """圈内动态(2026-08 扩版)：监测 孙哥(孙宇晨,含八卦·最高优先) / 特朗普(加密相关) / 交易所 / 交易所老板高管 /
     币圈大V·名人(动态/八卦/言论/活动) / 链·生态。命中监测主体即可入选(不限于加密关键词)，
@@ -334,6 +360,16 @@ def main():
         cv = "✓多源" if n.get("cross_verified") else "单源"
         tags = ",".join(n.get("tags", [])) or "无标签"
         print(f"  [{n.get('src','?')}|{cv}|{tags}] {n['title'][:90]}")
+    print()
+
+    # 9.5 今日要闻候选（按优先级：①监管/合规/政府/宏观 ②主流币 ③美股指数·板块·MAG7·AI·存储·芯片）
+    print("## 今日要闻候选（优先级：①监管合规/政府动作/宏观市场 ②主流币(BTC/ETH) ③美股指数·板块·MAG7·AI·存储·芯片）")
+    tn = top_news(news_items)
+    if tn:
+        for i, it in enumerate(tn, 1):
+            print(f"  {i}. [{it.get('src','?')}|{'多源' if it.get('cross_verified') else '单源'}] {it['title'][:90]}")
+    else:
+        print("  （无显著要闻候选）")
     print()
 
     # 10. ETF/爆仓/资金流
