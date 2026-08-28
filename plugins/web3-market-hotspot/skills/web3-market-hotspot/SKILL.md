@@ -8,7 +8,7 @@ platforms: [linux, macos]
 metadata:
   hermes:
     tags: [web3, crypto, market-analysis, hot-topic, content-ops, koi, creator, news-aggregation]
-    binaries: ['.gitignore']
+    binaries: ['.gitignore', 'gitignore']
 ---
 
 # Web3 行情热点采集与分析
