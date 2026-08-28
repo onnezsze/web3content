@@ -133,6 +133,18 @@ def build_output(market_r, news_r, social_r, macro_r, social_status, funding_r, 
         "macro_archive": macro_archived,
         "dogdoing": dogdoing_r.get("data", {}),
     }
+    # 存档今日热点(供"周度回顾:采集历史"使用)
+    try:
+        today_hot = []
+        sorted_news = sorted(news_clean, key=lambda x: (bool(x.get("cross_verified")), len(x.get("title", ""))), reverse=True)
+        for n in sorted_news[:3]:
+            sc = 10.0 if n.get("cross_verified") else round(7.0 + min(len(n.get("title", "")) / 60.0, 1.0), 1)
+            today_hot.append({"title": n.get("title", "")[:120], "score": sc})
+        if today_hot:
+            hot_history.save_today_top3(today_hot)
+    except Exception:
+        pass
+
     return out
 
 

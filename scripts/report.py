@@ -293,8 +293,26 @@ def fetch_week_news(days=7):
 
 
 def weekly_review(news_items, social_items, macro_items, top=8):
-    """周度回顾(周一简报专属)：上周热点回顾(独立检索近7天，防丢) + 本周可预估热点候选。"""
+    """周度回顾(周一简报专属)：上周热点回顾 = 采集历史(近7天每日top3) + 补充检索(近7天独立抓取) 融合去重；本周可预估热点候选。"""
     from collections import defaultdict
+
+    # ①A 采集历史：hot_history.json 近7天每日 top3
+    hist_path = os.path.join(BASE, "hot_history.json")
+    try:
+        with open(hist_path) as f:
+            hist = json.load(f)
+    except Exception:
+        hist = {}
+    cutoff_d = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+    hist_items = []
+    for d in sorted([k for k in hist if k >= cutoff_d], reverse=True):
+        for t in hist.get(d, [])[:3]:
+            ttl = str(t.get("title", ""))
+            if ttl:
+                hist_items.append({"date": d, "title": ttl[:90], "summary": "",
+                                   "src": "历史存档", "cross": 0, "score": t.get("score", "?")})
+
+    # ①B 补充检索：近7天独立抓取(新闻源) + 当天全量
     raw_items, cutoff = fetch_week_news(days=7)
     raw_items = raw_items + list(news_items) + list(social_items) + list(macro_items)
 
@@ -308,8 +326,7 @@ def weekly_review(news_items, social_items, macro_items, top=8):
             continue
         groups[_norm(title[:80])].append(n)
 
-    # ① 上周热点回顾：按跨源数 + 是否近7天聚合出热点(独立检索，非 top3 存档)
-    week_hotspots = []
+    search_items = []
     for key, lst in groups.items():
         srcs = {x.get("src") for x in lst if x.get("src")}
         cross = len(srcs)
@@ -317,14 +334,25 @@ def weekly_review(news_items, social_items, macro_items, top=8):
         dt = _parse_dt(first.get("published_at"))
         recent = (dt is not None and dt >= cutoff)
         if recent or cross >= 2:
-            week_hotspots.append({
+            search_items.append({
                 "date": dt.strftime("%m/%d") if dt else "本周内",
                 "title": (first.get("title") or first.get("text"))[:90],
                 "summary": (first.get("text") or first.get("title"))[:150],
                 "src": ",".join(sorted(srcs))[:24] or (first.get("src") or "?"),
-                "cross": cross,
+                "cross": cross, "score": None,
             })
-    week_hotspots.sort(key=lambda x: (-x["cross"], x["date"]))
+
+    # ① 融合去重：补充检索为主，采集历史补全未出现的标题
+    seen = set()
+    week_hotspots = []
+    for it in search_items:
+        seen.add(_norm(it["title"][:80]))
+        week_hotspots.append(it)
+    for h in hist_items:
+        if _norm(h["title"][:80]) not in seen:
+            week_hotspots.append(h)
+    # 排序：补充检索(有跨源)优先，历史补全(score)靠后，再按日期
+    week_hotspots.sort(key=lambda x: (1 if x.get("src") == "历史存档" else 0, -(x.get("cross") or 0), x["date"]))
 
     # ② 本周可预估热点：前瞻关键词扫描
     fwd_kw = ["将于", "下周", "本月", "本周", "明日", "届时", "解锁", "上线", "暂定",
@@ -333,7 +361,7 @@ def weekly_review(news_items, social_items, macro_items, top=8):
               "mainnet", "launch", "unlock", "earnings", "hearing", "fomc", "vote",
               "proposal", "expiry", "upgrade", "halving", "snapshot", "summary"]
     coming = []
-    seen = set()
+    seen2 = set()
     for n in list(news_items) + list(social_items) + list(macro_items):
         title = n.get("title", "") or n.get("text", "")
         if not title:
@@ -341,9 +369,9 @@ def weekly_review(news_items, social_items, macro_items, top=8):
         low = (title + " " + n.get("text", "")).lower()
         if any(k.lower() in low for k in fwd_kw):
             key = title[:50]
-            if key in seen:
+            if key in seen2:
                 continue
-            seen.add(key)
+            seen2.add(key)
             coming.append({"title": title[:110],
                            "src": n.get("src", n.get("channel", "?")),
                            "text": (n.get("text", "") or title)[:160]})
@@ -523,11 +551,13 @@ def main():
         wr = weekly_review(news_items, social_items, macro_clean)
         print()
         print("## 周度回顾（周一简报专属 · 上周回顾 + 本周预估）")
-        print("  【上周热点回顾】（独立检索近7天）")
+        print("  【上周热点回顾】（采集历史 + 补充检索·近7天）")
         if wr["week_hotspots"]:
             for it in wr["week_hotspots"]:
-                print(f"    {it['date']} {it['title']}（跨源{it['cross']}家）")
-                print(f"      摘要：{it['summary']}")
+                tag = f"跨源{it['cross']}家" if it.get("cross") else f"评分{it.get('score', '?')}"
+                print(f"    {it['date']} {it['title']}（{tag}）")
+                if it.get("summary"):
+                    print(f"      摘要：{it['summary']}")
         else:
             print("    （上周暂无显著热点）")
         print("  【本周可预估热点候选】")
