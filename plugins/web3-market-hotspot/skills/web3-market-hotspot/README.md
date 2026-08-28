@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区），JSON结构化输出（异动预计算、交叉验证、情绪词频、昨日热点存档、健康检查），10段式日报模板服务内容运营与KOL创作。"
-version: 7.8.0
+version: 7.9.0
 author: Lucas Wang
 license: MIT
 platforms: [linux, macos]
@@ -147,6 +147,11 @@ preflight.py 并发 ping 12 源，输出 ok/failed + 延迟 ms。
 无需 API key，开箱即用。
 
 ## 变更记录（Changelog）
+
+### v7.9.0 · 首次使用引导（Onboarding）（2026-08）
+- 新增「首次使用引导」：初次调用本 skill 时先向用户确认 **播报时间与节奏周期**（定时 cron 播报 / 一次性简报）与 **输出形态**。
+- 输出形态自适应：**飞书场景**出云文档链接；**其他 AI 场景**（Claude/GPT/自有 Agent）直接返回**带格式 Markdown 文案**。
+- 附「引导提示词」可直接贴给用户收集配置；SKILL.md 同步。
 
 ### v7.8.0 · 创作者提示词通用框架化（2026-08）
 - 「💡 创作者怎么用」由"每日绑定热点的实例"改为**通用可复用框架**，不依赖任何具体热点。
