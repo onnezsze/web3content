@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区），JSON结构化输出（异动预计算、交叉验证、情绪词频、昨日热点存档、健康检查），10段式日报模板服务内容运营与KOL创作。"
-version: 7.7.0
+version: 7.8.0
 author: Lucas Wang
 license: MIT
 platforms: [linux, macos]
@@ -147,6 +147,12 @@ preflight.py 并发 ping 12 源，输出 ok/failed + 延迟 ms。
 无需 API key，开箱即用。
 
 ## 变更记录（Changelog）
+
+### v7.8.0 · 创作者提示词通用框架化（2026-08）
+- 「💡 创作者怎么用」由"每日绑定热点的实例"改为**通用可复用框架**，不依赖任何具体热点。
+- 新增 `references/creator-frameworks.md`：7 个角色（推特KOL / 小红书KOL / TikTokKOL / Web3·美股社区创作者 / 平台话题运营 / 平台社区运营 / 平台直播运营）各一套"复制即用"提示词框架，含占位符 `{主题} {硬数据} {新闻标题} {原声} {角度}`。
+- 用法：复制对应角色框架 → 把 `{ }` 替换成用户选定的热点内容 → 整段发给任意 AI（Claude/GPT/Hermes）即可产出脚本；框架长期可用，热点随填。
+- SKILL.md 日报模板「创作者怎么用」段改为引用该框架文件 + 保留推文示例。
 
 ### v7.7.0 · 周度回顾（周一简报）（2026-08）
 - **周一简报新增「周度回顾」模块**：放在【圈内动态】后、【创作者怎么用】前，仅有周一输出。
