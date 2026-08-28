@@ -84,6 +84,7 @@ def filter_and_dedup(items, hours=24):
             "tags": tags,
             "published_at": str(ts) if ts else "",
             "dedup_key": key,
+            "url": it.get("url", "") or "",
         }
         # 1) 精确去重
         if key in seen:

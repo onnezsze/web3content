@@ -28,6 +28,7 @@ class RSSNews(Source):
                                 "title": html.unescape(title),
                                 "src": src, "published_at": pub,
                                 "text": html.unescape(title),
+                                "url": (item.findtext("link") or "").strip(),
                             })
                 except Exception:
                     continue
@@ -88,6 +89,7 @@ class EastMoneyNews(Source):
                         "title": summary[:120],
                         "src": "eastmoney", "published_at": it.get("showTime", ""),
                         "text": summary,
+                        "url": str(it.get("url") or it.get("link") or it.get("fullUrl") or "")[:300],
                     })
             if out:
                 return self.ok(out)

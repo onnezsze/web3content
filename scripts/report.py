@@ -519,7 +519,8 @@ def main():
     tn = top_news(news_items)
     if tn:
         for i, it in enumerate(tn, 1):
-            print(f"  {i}. [{it.get('src','?')}|{'多源' if it.get('cross_verified') else '单源'}] {it['title'][:90]}")
+            u = it.get("url") or ""
+            print(f"  {i}. [{it.get('src','?')}|{'多源' if it.get('cross_verified') else '单源'}] {it['title'][:90]}  {u}")
     else:
         print("  （无显著要闻候选）")
     print()

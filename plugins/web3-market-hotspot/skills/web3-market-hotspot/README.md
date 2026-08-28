@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区），JSON结构化输出（异动预计算、交叉验证、情绪词频、昨日热点存档、健康检查），10段式日报模板服务内容运营与KOL创作。"
-version: 7.14.0
+version: 7.15.0
 author: Lucas Wang
 license: MIT
 platforms: [linux, macos]
@@ -147,6 +147,10 @@ preflight.py 并发 ping 12 源，输出 ok/failed + 延迟 ms。
 无需 API key，开箱即用。
 
 ## 变更记录（Changelog）
+
+### v7.15.0 · 今日要闻附来源链接（2026-08）
+- 采集层为新闻保留 URL：RSS 源抓 `<link>`，东方财富抓 url/link/fullUrl；preprocess 透传 `url` 字段。
+- report.py `top_news()` 输出的「今日要闻候选」**自带 url**；SKILL.md 模板要求每条要闻**必须附来源链接**。
 
 ### v7.14.0 · 创作者框架分两类视角（2026-08）
 - `references/creator-frameworks.md` 重构为 **A 个人创作者 / B 平台运营** 两大板块。
