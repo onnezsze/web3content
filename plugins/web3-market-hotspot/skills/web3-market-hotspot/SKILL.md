@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3/美股内容创作者热点简报：多源并发采集（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区/DogDoing），AI合成核心热点+四要素+可直接复用的选题/推文/钩子，输出干净排版的飞书文档。"
-version: 7.15.0
+version: 7.16.0
 author: Lucas + Hermes Agent
 license: MIT
 platforms: [linux, macos]

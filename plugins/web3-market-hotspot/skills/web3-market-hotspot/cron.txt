@@ -1,0 +1,28 @@
+# Web3 行情热点简报 —— 定时触发示例
+# 用途：在 Slack / Claude 代理 / 服务器上给本 skill 配定时任务。
+# 时间注意：服务器/cron 常为 UTC；北京时间 = UTC+8（北京 09:00 = UTC 01:00）。
+# 推荐统一入口：python3 run.py（默认输出文本简报，零第三方依赖，不会误触飞书）。
+
+# ── crontab 示例（若你有系统 cron）────────────────────────────
+# 每天 09:00 北京 = 每天 01:00 UTC
+0 1 * * *     cd /path/to/web3content && /usr/bin/python3 run.py > /tmp/web3brief.md 2>&1
+
+# 每天 09:00 北京，且周一额外带上周报（周报由 report.py 周度回顾段自动叠加）
+0 1 * * *     cd /path/to/web3content && /usr/bin/python3 run.py > /tmp/web3brief.md 2>&1
+
+# 每 2 小时刷新一次（可选）
+0 */2 * * *   cd /path/to/web3content && /usr/bin/python3 run.py > /tmp/web3brief.md 2>&1
+
+# 每周一 09:00 北京 = 周一 01:00 UTC（若你只想周报）
+0 1 * * 1     cd /path/to/web3content && /usr/bin/python3 run.py > /tmp/web3brief.md 2>&1
+
+# 一次性：立即生成今天简报（文本）
+python3 run.py
+
+# ── 说明 ────────────────────────────────────────────────────
+# 1) 零依赖：核心管线纯 Python 标准库，无需 pip install。
+# 2) fail-soft：任一数据源失败不影响其余源（实测 18/18 全通）。
+# 3) 输出为 Markdown 文本，Claude/GPT/Slack 可直接消费。
+# 4) 如需飞书文档：改用  python3 scripts/feishu_doc.py  （需 pip install lark-oapi + lark 凭据）。
+# 5) 配图：python3 scripts/charts.py （需 pip install matplotlib + 中文字体）。
+# 6) 若用 Claude 代理做"定时任务"：在该 agent 的调度里调用上面的命令即可（run.py 命令幂等、可重复）。

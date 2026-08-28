@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区），JSON结构化输出（异动预计算、交叉验证、情绪词频、昨日热点存档、健康检查），10段式日报模板服务内容运营与KOL创作。"
-version: 7.15.0
+version: 7.16.0
 author: Lucas Wang
 license: MIT
 platforms: [linux, macos]
@@ -153,16 +153,23 @@ preflight.py 并发 ping 12 源，输出 ok/failed + 延迟 ms。
 ```bash
 git clone https://github.com/onnezsze/web3content
 cd web3content
-python3 scripts/report.py     # stdout 直接输出结构化文本简报（行情/涨幅/要闻/圈内动态/周度回顾）
+python3 run.py                # 统一入口：默认输出结构化文本简报（Claude/Slack 直接消费，不碰飞书）
 ```
 
-- **输出形态**：`report.py` 输出的是 **Markdown 化文本**，Claude / GPT / Slack 可直接消费；**不要**调 `feishu_doc.py`（那条是飞书文档专线，需 lark 凭据）。
+- **统一入口**：用 `run.py` 而非直接 `scripts/report.py` —— 它默认只出文本；只有加 `--feishu` 才走飞书文档，避免误触。`run.py --preflight` 可做源健康检查。
+- **输出形态**：`report.py` / `run.py` 输出的是 **Markdown 化文本**，Claude / GPT / Slack 可直接消费；**不要**调 `feishu_doc.py`（那条是飞书文档专线，需 lark 凭据）。
+- **定时**：见 `cron.txt`（crontab 示例，含 UTC/北京时间换算、每日/每周一每两小时等节拍）；Slack 代理用其调度调用 `run.py` 即可（命令幂等、可重复）。
 - **触发**：无系统 cron 的环境，用 agent 指令触发（如"生成今天简报"）或环境侧定时任务；脚本与 cron 解耦。
 - **网络**：依赖公开 API（CoinGecko/OKX/RSS/jina/TG/东财/华尔街见闻/DogDoing 等）；若某源被限会 **fail-soft**，不影响其余源（实测 18/18 全通）。
 - **可选增强**：配图用 `python3 scripts/charts.py`（需 `pip install matplotlib` + 中文字体）；飞书文档用 `feishu_doc.py`（需 `pip install lark-oapi` + `.env` 凭据）。
 - **技能说明**：`SKILL.md` 含完整触发条件 / 采集 / 模板（日报·周报·创作者框架）说明，可直接作为 agent 的行为规范。
 
 ## 变更记录（Changelog）
+
+### v7.16.0 · Slack/Claude 统一入口 + 定时示例（2026-08）
+- 新增 **`run.py` 统一入口**：默认只输出文本简报（Claude/Slack 直接消费，零第三方依赖）；`--feishu` 才走飞书文档，`--preflight` 源健康检查 —— 避免 agent 误触飞书路径。
+- 新增 **`cron.txt` 定时示例**：crontab 节拍（每天 09:00 北京 / 每周一 / 每两小时）+ UTC/北京时间换算 + 备注。
+- README「在其他环境接入(Slack/Claude 代理)」改为推荐 `run.py`，并注明 `cron.txt`。
 
 ### v7.15.0 · 今日要闻附来源链接（2026-08）
 - 采集层为新闻保留 URL：RSS 源抓 `<link>`，东方财富抓 url/link/fullUrl；preprocess 透传 `url` 字段。
