@@ -146,6 +146,22 @@ preflight.py 并发 ping 12 源，输出 ok/failed + 延迟 ms。
 
 无需 API key，开箱即用。
 
+## 在其他环境接入（Slack / Claude 代理 / 任意 AI）
+
+本仓库可 `git clone` 后直接运行，**核心管线零第三方依赖**（纯 Python 标准库）：
+
+```bash
+git clone https://github.com/onnezsze/web3content
+cd web3content
+python3 scripts/report.py     # stdout 直接输出结构化文本简报（行情/涨幅/要闻/圈内动态/周度回顾）
+```
+
+- **输出形态**：`report.py` 输出的是 **Markdown 化文本**，Claude / GPT / Slack 可直接消费；**不要**调 `feishu_doc.py`（那条是飞书文档专线，需 lark 凭据）。
+- **触发**：无系统 cron 的环境，用 agent 指令触发（如"生成今天简报"）或环境侧定时任务；脚本与 cron 解耦。
+- **网络**：依赖公开 API（CoinGecko/OKX/RSS/jina/TG/东财/华尔街见闻/DogDoing 等）；若某源被限会 **fail-soft**，不影响其余源（实测 18/18 全通）。
+- **可选增强**：配图用 `python3 scripts/charts.py`（需 `pip install matplotlib` + 中文字体）；飞书文档用 `feishu_doc.py`（需 `pip install lark-oapi` + `.env` 凭据）。
+- **技能说明**：`SKILL.md` 含完整触发条件 / 采集 / 模板（日报·周报·创作者框架）说明，可直接作为 agent 的行为规范。
+
 ## 变更记录（Changelog）
 
 ### v7.15.0 · 今日要闻附来源链接（2026-08）
