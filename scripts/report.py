@@ -565,6 +565,13 @@ def main():
     for n in macro_clean[:10]:
         print(f"  [{n.get('src','?')}] {n['title'][:90]}")
 
+    # 12.4 财经国际（联合早报 · finance/world）
+    zb = d.get("zaobao", [])
+    if zb:
+        print("## 财经国际（联合早报）")
+        for n in zb[:8]:
+            print(f"  [zaobao] {n['published_at']} {n['title'][:88]}  {n.get('url','')}")
+
     # 12.5 圈内动态（按优先级+重要程度取前5；含 DogDoing Alpha 热点 + 主流媒体 mainsm）
     mainsm_items = d.get("mainsm", [])
     print()

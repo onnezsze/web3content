@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区），JSON结构化输出（异动预计算、交叉验证、情绪词频、昨日热点存档、健康检查），10段式日报模板服务内容运营与KOL创作。"
-version: 7.19.0
+version: 7.20.0
 author: Lucas Wang
 license: MIT
 platforms: [linux, macos]
@@ -165,6 +165,10 @@ python3 run.py                # 统一入口：默认输出结构化文本简报
 - **技能说明**：`SKILL.md` 含完整触发条件 / 采集 / 模板（日报·周报·创作者框架）说明，可直接作为 agent 的行为规范。
 
 ## 变更记录（Changelog）
+
+### v7.20.0 · 新增联合早报财经国际源（2026-08）
+- 新增 `sources/zaobao.py`：抓 `https://www.zaobao.com/finance/world`，解析 标题/链接/日期，覆盖 美元/油价/美股/英伟达/美联储鹰派/新兴市场债券/地缘 等财经国际主流报道。
+- collect.py 接入 `zaobao`，存 `out['zaobao']`；report.py 新增「财经国际（联合早报）」展示段（全量、不受 24h 截断，带链接）。
 
 ### v7.19.0 · 新增主流/综合媒体源（2026-08）
 - 新增 `sources/mainsm.py`：Google News 中文 RSS（按 孙宇晨/加密货币/比特币/加密/美股/stablecoin/meme币/区块链 关键词），补上**综合/娱乐/财经主流媒体**（联合早报/新浪/凤凰/观察者/上观/文学城/36Kr 等）对孙哥这类社会·娱乐·财经热点的报道。
