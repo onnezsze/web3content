@@ -246,9 +246,23 @@ def circle_dynamics(news_items, social_items, macro_items, top=5, extra_items=No
                  "合约", "现货", "主网", "链上", "数字资产", "defi", "nft", "meme", "web3", "doge", "xrp"]
     def _entity_hit(t):
         return any(k.lower() in t for kws in CIRCLE_ENTITY.values() for k in kws)
+    # 时效门控：新闻/快讯/公告源直通；社媒(币安广场)等仅当命中"新事件信号词"才视为新动态，排除旧瓜回味
+    NEWS_SRC = {"cointelegraph", "coindesk", "theblock", "jinse", "金色", "wublock", "吴说",
+                "chaincatcher", "链捕手", "odaily_news", "odaily", "binance_announcements",
+                "Binance Alpha", "老虎", "laohu", "东方财富", "eastmoney", "华尔街见闻", "wscn"}
+    NEW_EVENT_KW = ["上线", "上币", "下架", "公告", "官宣", "爆料", "辟谣", "被拘", "被查", "起诉",
+                    "受审", "监管", "获批", "崩", "暴涨", "暴跌", "新高", "list", "破位", "清算",
+                    "合约", "爆仓", "空投", "回购", "发布", "进军", "合作", "收购", "融资", "破产",
+                    "跑路", "黑客", "被盗", "禁用", "下线", "销毁"]
+    def _new_event(it):
+        if it.get("src") in NEWS_SRC:
+            return True
+        t = (it["title"] + " " + it["text"]).lower()
+        return any(k in t for k in NEW_EVENT_KW)
     cand = [it for it in pool
             if it["score"] >= 2 and (_entity_hit((it["title"] + " " + it["text"]).lower())
-                                     or any(k in (it["title"] + " " + it["text"]).lower() for k in CRYPTO_KW))]
+                                     or any(k in (it["title"] + " " + it["text"]).lower() for k in CRYPTO_KW))
+            and _new_event(it)]
     # 按优先级(小=高)再按重要程度(score 降序)排序
     cand.sort(key=lambda x: (x["priority"], -x["score"]))
 
