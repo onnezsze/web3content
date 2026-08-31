@@ -565,7 +565,8 @@ def main():
     for n in macro_clean[:10]:
         print(f"  [{n.get('src','?')}] {n['title'][:90]}")
 
-    # 12.5 圈内动态（按优先级+重要程度取前5；含 DogDoing Alpha 热点等额外源）
+    # 12.5 圈内动态（按优先级+重要程度取前5；含 DogDoing Alpha 热点 + 主流媒体 mainsm）
+    mainsm_items = d.get("mainsm", [])
     print()
     print("## 圈内动态")
     dd_circle = d.get("dogdoing", {}) or {}
@@ -579,7 +580,7 @@ def main():
                 alpha_items.append({"title": f"[Alpha] {nm}",
                                     "text": f"Binance Alpha 热点「{nm}」（{it.get('type','?')} · 净流入 {it.get('netInflow','?')} · 代币x{it.get('tokenSize','?')}）",
                                     "src": "Binance Alpha", "kind": "Alpha热点"})
-    cd = circle_dynamics(news_items, social_items, macro_clean, extra_items=alpha_items)
+    cd = circle_dynamics(news_items + mainsm_items, social_items, macro_clean, extra_items=alpha_items)
     if cd:
         for i, it in enumerate(cd, 1):
             print(f"  {i}. {it['title']}")
