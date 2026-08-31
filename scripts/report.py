@@ -189,14 +189,29 @@ def circle_dynamics(news_items, social_items, macro_items, top=5, extra_items=No
     HIGH_SIGNAL = ["孙宇晨", "孙哥", "孙割", "cz", "trump", "特朗普", "安全事件", "空投", "下架", "暂停", "上架",
                    "etf", "加仓", "上市", "主网", "制裁", "币安", "coinbase", "okx", "卖出", "买入", "绯闻", "热搜",
                    "爆料", "辟谣", "官宣", "回应", "恋爱", "起诉"]
+    from datetime import timedelta
+    _recent = datetime.now() - timedelta(hours=24)
+    def _pub(it):
+        return it.get("published_at") or it.get("time") or ""
+    def _fresh(it):
+        if not _pub(it):
+            return True                       # 无时间戳(币安广场等)视为当天
+        dt = _parse_dt(_pub(it))
+        return dt is None or dt >= _recent    # 解析失败视为当天；显式超 24h 的旧闻滤除
     pool = []
     for it in news_items:
+        if not _fresh(it):
+            continue
         pool.append({"title": it.get("title", ""), "text": it.get("text", it.get("title", "")),
                      "src": it.get("src", "?"), "kind": "新闻"})
     for it in social_items:
+        if not _fresh(it):
+            continue
         pool.append({"title": it.get("title", it.get("text", "")), "text": it.get("text", it.get("title", "")),
                      "src": it.get("src", it.get("channel", "?")), "kind": "社媒"})
     for it in macro_items:
+        if not _fresh(it):
+            continue
         pool.append({"title": it.get("title", ""), "text": it.get("text", it.get("title", "")),
                      "src": it.get("src", "?"), "kind": "宏观"})
     for it in (extra_items or []):
@@ -237,13 +252,17 @@ def circle_dynamics(news_items, social_items, macro_items, top=5, extra_items=No
     # 按优先级(小=高)再按重要程度(score 降序)排序
     cand.sort(key=lambda x: (x["priority"], -x["score"]))
 
-    # 标题去重(同优先级内保留分数高者)
-    seen, out = set(), []
+    # 标题去重(同优先级内保留分数高者)；同一主体档(priority)最多 2 条，避免单一主体霸榜
+    seen, out, prio_count = set(), [], {}
     for it in cand:
         k = re.sub(r"[^\w]", "", it["title"][:36]).lower()
         if k in seen:
             continue
+        pr = it["priority"]
+        if prio_count.get(pr, 0) >= 2:
+            continue
         seen.add(k)
+        prio_count[pr] = prio_count.get(pr, 0) + 1
         out.append(it)
         if len(out) >= top:
             break
@@ -579,6 +598,13 @@ def main():
         for n in od[:10]:
             print(f"  [odaily·{n.get('kind','')}] {n['title'][:88]}  {n.get('url','')}")
 
+    # 12.4c 主流媒体聚焦（主链媒体对名人/大佬事件的深度报道；不进圈内动态，避免旧闻占位）
+    ms = d.get("mainsm", [])
+    if ms:
+        print("## 主流媒体聚焦（主链/财经媒体深度报道）")
+        for n in ms[:8]:
+            print(f"  [{n.get('src','?')}] {n['title'][:84]}  {n.get('url','')}")
+
     # 12.5 圈内动态（按优先级+重要程度取前5；含 DogDoing Alpha 热点 + 主流媒体 mainsm）
     mainsm_items = d.get("mainsm", [])
     print()
@@ -594,7 +620,7 @@ def main():
                 alpha_items.append({"title": f"[Alpha] {nm}",
                                     "text": f"Binance Alpha 热点「{nm}」（{it.get('type','?')} · 净流入 {it.get('netInflow','?')} · 代币x{it.get('tokenSize','?')}）",
                                     "src": "Binance Alpha", "kind": "Alpha热点"})
-    cd = circle_dynamics(news_items + mainsm_items, social_items, macro_clean, extra_items=alpha_items)
+    cd = circle_dynamics(news_items, social_items, macro_clean, extra_items=alpha_items)
     if cd:
         for i, it in enumerate(cd, 1):
             print(f"  {i}. {it['title']}")

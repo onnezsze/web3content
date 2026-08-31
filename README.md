@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区），JSON结构化输出（异动预计算、交叉验证、情绪词频、昨日热点存档、健康检查），10段式日报模板服务内容运营与KOL创作。"
-version: 7.21.0
+version: 7.22.0
 author: Lucas Wang
 license: MIT
 platforms: [linux, macos]
@@ -165,6 +165,11 @@ python3 run.py                # 统一入口：默认输出结构化文本简报
 - **技能说明**：`SKILL.md` 含完整触发条件 / 采集 / 模板（日报·周报·创作者框架）说明，可直接作为 agent 的行为规范。
 
 ## 变更记录（Changelog）
+
+### v7.22.0 · 圈内动态：最新+多样，旧闻独立段（2026-08）
+- 圈内动态加**24h 新鲜度过滤**（显式超 24h 的旧闻滤除）+ **单一主体档最多 2 条**（避免孙哥霸榜）。
+- `mainsm`（主链媒体对孙哥等深度报道）**改独立「主流媒体聚焦」段**，不再进圈内动态 —— 圈内动态回归**老源(币安广场/TG/快讯/金色/CoinTelegraph)当天最新**、主体多样。
+- 结果：圈内动态 = 孙哥(当天币安广场八卦,2条)+ 特朗普(2条) + 链上/大V(1条)，老源为主；8/28–29 孙哥旧闻进"主流媒体聚焦"。
 
 ### v7.21.0 · 新增 Odaily 星球日报源（2026-08）
 - 新增 `sources/odaily.py`：抓 `https://www.odaily.news/` 首页（post 深度 + newsflash 快讯），覆盖 加密/DeFi/美股/AI/监管/快讯。
