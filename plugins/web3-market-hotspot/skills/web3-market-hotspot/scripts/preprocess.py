@@ -105,6 +105,25 @@ def filter_and_dedup(items, hours=24):
         entry["sources"] = [entry["src"]]
         entry["cross_verified"] = False
         entry["stale"] = False
+        # 24h 时效过滤：能解析时间的，超 cutoff 记为 stale(过滤掉陈旧新闻)
+        dt = None
+        if ts_raw:
+            tstr = str(ts_raw).strip()
+            try:
+                from email.utils import parsedate_to_datetime
+                dt = parsedate_to_datetime(tstr)
+            except Exception:
+                dt = None
+            if dt is None:
+                try:
+                    dt = datetime.fromisoformat(tstr.replace("Z", "+00:00").replace(" ", "T"))
+                except Exception:
+                    dt = None
+        if dt is not None:
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            if dt < cutoff:
+                entry["stale"] = True
         seen[key] = entry
         similar_groups.append({"entry": entry, "tokens": toks})
 
