@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区），JSON结构化输出（异动预计算、交叉验证、情绪词频、昨日热点存档、健康检查），10段式日报模板服务内容运营与KOL创作。"
-version: 7.17.0
+version: 7.18.0
 author: Lucas Wang
 license: MIT
 platforms: [linux, macos]
@@ -165,6 +165,11 @@ python3 run.py                # 统一入口：默认输出结构化文本简报
 - **技能说明**：`SKILL.md` 含完整触发条件 / 采集 / 模板（日报·周报·创作者框架）说明，可直接作为 agent 的行为规范。
 
 ## 变更记录（Changelog）
+
+### v7.18.0 · 圈内动态监测扩容（2026-08）
+- 监测主体新增 **何一、徐明星**、OKX CE0/Star Xu；事件信号词新增 **转发/转推/评论/推文/tweet/retweet/repost/发推/互动/表态/站队**。
+- 目的：让"孙宇晨发推 + CZ/何一/徐明星转发评论"这类大佬动态**一旦被快讯/币安广场间接报道**即可命中。
+- 说明：孙宇晨相关（含八卦）保持**最高优先**且占位（report 圈内动态前 3 条均为孙哥）；纯 X 源事件仍受限于无 X API。
 
 ### v7.17.0 · 新增「今日热门资产」+ 全市场热门源（2026-08）
 - 新增数据源 `sources/hot_assets.py`：CoinGecko 全市场 **成交量榜 + 24h 涨幅榜**（per_page=150），承接此前被主流 37 币榜漏掉的 **牛来/PONS/UNI** 等链上/新上/高出量交易型热点。

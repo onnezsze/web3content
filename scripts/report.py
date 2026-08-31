@@ -167,9 +167,10 @@ def circle_dynamics(news_items, social_items, macro_items, top=5, extra_items=No
     按优先级(孙哥>特朗普>交易所>老板高管>币圈大V>链/生态)+重要程度筛选，返回 top 条。"""
     CIRCLE_ENTITY = {
         "孙哥/孙宇晨": ["孙宇晨", "孙哥", "孙割", "justin sun", "波场", "tron", "htx", "火币", "trx"],
-        "交易所老板高管": ["cz", "赵长鹏", "brian armstrong", "richard teng", "coinbase ceo", "binance ceo",
-                         "创始人", "高管", "董事长", "孙宇晨"],
-        "币圈大V/名人": ["arthur hayes", "vitalik", "v神", "马斯克", "musk", "cz", "孙宇晨", "分析师", "大佬",
+        "交易所老板高管": ["cz", "赵长鹏", "何一", "徐明星", "brian armstrong", "richard teng", "coinbase ceo",
+                         "binance ceo", "okx ceo", "star xu", "创始人", "高管", "董事长", "孙宇晨"],
+        "币圈大V/名人": ["arthur hayes", "vitalik", "v神", "马斯克", "musk", "cz", "孙宇晨", "何一", "徐明星",
+                        "分析师", "大佬",
                         "巨鲸", "whale", "喊单", "kelly", "crypto daily", "bankless", "coin bureau", "gabor",
                         "唐小僧", "凉兮", "梭教授"],
         "特朗普/监管": ["特朗普", "trump", "美财", "财政部", "制裁", "sec", "监管", "白宫", "参议院", "灰度",
@@ -181,6 +182,7 @@ def circle_dynamics(news_items, social_items, macro_items, top=5, extra_items=No
     }
     # 动态/八卦/言论/活动 信号词：命中监测主体时加分，用于抓名人八卦、老板言论、活动/传闻
     EVENT_KW = ["绯闻", "恋爱", "婚", "分手", "传闻", "被曝", "辟谣", "回应", "热搜", "爆料", "官宣", "宣布",
+                "转发", "转推", "评论", "推文", "tweet", "retweet", "repost", "发推", "互动", "表态", "站队",
                 "出席", "演讲", "会见", "发表", "称", "表示", "谈到", "喊单", "晒", "反转", "瓜", "骂", "争论",
                 "离职", "入职", "收购", "起诉", "指控", "涉嫌", "冻结", "警告", "调查", "开庭", "喊话", "发声",
                 "表态", "怒怼", "讽刺", "开撕", "空头", "号召"]
