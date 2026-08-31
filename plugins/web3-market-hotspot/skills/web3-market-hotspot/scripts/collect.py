@@ -114,6 +114,13 @@ def build_output(market_r, news_r, social_r, macro_r, social_status, funding_r, 
     news_clean, news_archived = preprocess.filter_and_dedup(news_items)
     social_clean, social_archived = preprocess.filter_and_dedup(social_items)
     macro_clean, macro_archived = preprocess.filter_and_dedup(macro_items)
+    # 个股资讯过滤（v7.34）：仅保留 港股互联网大厂 + AI股，其余个股资讯剔除
+    news_clean = preprocess.drop_individual_stock(news_clean)
+    social_clean = preprocess.drop_individual_stock(social_clean)
+    macro_clean = preprocess.drop_individual_stock(macro_clean)
+    mainsm_items = preprocess.drop_individual_stock(mainsm_items)
+    odaily_items = preprocess.drop_individual_stock(odaily_items)
+    zaobao_items = preprocess.drop_individual_stock(zaobao_items)
     anomalies = preprocess.precompute_anomalies(market)
 
     # 情绪词频（基于社媒原文）

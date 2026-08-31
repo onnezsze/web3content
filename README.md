@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区），JSON结构化输出（异动预计算、交叉验证、情绪词频、昨日热点存档、健康检查），10段式日报模板服务内容运营与KOL创作。"
-version: 7.33.0
+version: 7.34.0
 author: Lucas Wang
 license: MIT
 platforms: [linux, macos]
@@ -165,6 +165,9 @@ python3 run.py                # 统一入口：默认输出结构化文本简报
 - **技能说明**：`SKILL.md` 含完整触发条件 / 采集 / 模板（日报·周报·创作者框架）说明，可直接作为 agent 的行为规范。
 
 ## 变更记录（Changelog）
+
+### v7.34.0 · 新增「个股资讯过滤」+ 内容分类修正（2026-08-31）
+只保留【港股互联网大厂 + AI股】的个股资讯，其余个股（a股/美股其他/港股非互联网大厂，如茅台/招行/铜陵有色）一概剔除。实现于 `preprocess.py is_individual_stock()`，并接入 collect / report.circle_dynamics / server.build_payload 三处；圈内动态不再混入非圈内主体的个股。判定规则：白名单公司→保留；大盘·指数·板块·宏观层→保留；证券代码（000630.SZ/600519.SH/9988.HK）→剔除；命中个股事件信号+公司主体特征→剔除。加密项目/大盘/宏观不误伤。
 
 ### v7.33.0 · 补齐 7.21 审查遗留项（risk/外部清单/binaries说明/依赖声明）（2026-08）
 - frontmatter 加 **`risk: medium`**（审核要求明确声明风险等级）。

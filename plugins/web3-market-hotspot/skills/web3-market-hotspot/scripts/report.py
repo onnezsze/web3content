@@ -5,6 +5,11 @@ import subprocess, sys, os, json, re
 from datetime import datetime, timedelta
 
 BASE = os.path.dirname(os.path.abspath(__file__))
+try:
+    from preprocess import is_individual_stock, drop_individual_stock
+except Exception:
+    def is_individual_stock(t): return False
+    def drop_individual_stock(it): return it
 
 # 币名映射：symbol -> [中文名, 英文全名]（用于精确事件匹配）
 COIN_NAMES = {
@@ -263,6 +268,9 @@ def circle_dynamics(news_items, social_items, macro_items, top=5, extra_items=No
             if it["score"] >= 2 and (_entity_hit((it["title"] + " " + it["text"]).lower())
                                      or any(k in (it["title"] + " " + it["text"]).lower() for k in CRYPTO_KW))
             and _new_event(it)]
+    # v7.34 个股过滤：圈内动态只保留 真·圈内主体(孙哥/特朗普/交易所/老板高管/币圈大V/链生态)，
+    # 剔除 铜陵有色/贵州茅台 等非圈内主体的个股资讯(命中非白名单个股信号即剔除)
+    cand = [it for it in cand if not is_individual_stock(it["title"] + " " + it["text"])]
     # 按优先级(小=高)再按重要程度(score 降序)排序
     cand.sort(key=lambda x: (x["priority"], -x["score"]))
 

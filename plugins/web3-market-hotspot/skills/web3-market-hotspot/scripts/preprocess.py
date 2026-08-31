@@ -137,6 +137,77 @@ def filter_and_dedup(items, hours=24):
     return kept[:30], archived[:20]
 
 
+# =============================================================================
+# 个股资讯过滤（v7.34）：只保留【港股互联网大厂】+【AI股】的个股资讯，
+# 其余个股（a股/美股其他/港股非互联网大厂等）一律剔除。
+# 判定为"个股资讯"：命中公司/证券事件信号 + 出现公司主体特征，且不在保留白名单。
+# 大盘/指数/板块/宏观层面、以及加密币种项目，不误伤。
+# =============================================================================
+# 保留白名单：港股互联网大厂 + AI / 大科技 / 存储芯片股（中英文，尽量全）
+KEEP_STOCK = [
+    # —— 港股互联网大厂 ——
+    "腾讯", "腾讯控股", "tencent", "阿里巴巴", "阿里", "alibaba", "美团", "meituan",
+    "京东", "jd.com", "网易", "netease", "百度", "baidu", "小米", "xiaomi", "快手", "kuaishou",
+    "拼多多", "pinduoduo", "pdd", "哔哩哔哩", "bilibili", "微博", "weibo", "携程", "trip.com",
+    # —— AI / 大科技 / 存储芯片股 ——
+    "英伟达", "nvidia", "nvda", "台积电", "tsmc", "amd", "美光", "micron", "博通", "broadcom",
+    "sk hynix", "海力士", "英特尔", "intel", "三星电子", "samsung", "超微", "super micro", "smci",
+    "高通", "qualcomm", "arm", "marvell", "迈威尔", "coreweave", "甲骨文", "oracle", "英飞凌", "infineon",
+    "微软", "microsoft", "msft", "苹果", "apple", "aapl", "谷歌", "google", "alphabet", "googl",
+    "meta", "脸书", "特斯拉", "tesla", "tsla", "亚马逊", "amazon", "amzn", "netflix", "奈飞",
+    "openai", "anthropic", "claude", "gpt", "sam altman", "chegg",
+]
+# 大盘 / 指数 / 板块 / 宏观层面 → 非"个股"，保留
+BOARD_MACRO = [
+    "纳指", "标普", "道指", "纳斯达克", "标普500", "恒生指数", "恒指", "上证", "深证", "沪深",
+    "创业板指", "大盘", "指数基金", "股指", "板块", "全线", "集体上涨", "集体走低", "美股三大",
+    "美联储", "加元", "降息", "加息", "利率决议", "国债", "美国国债", "原油", "黄金", "大宗商品",
+    "非农", "cpi", "gdp", "通胀", "关税", "ETF", "比特币", "以太坊", "加密", "币市",
+]
+# 公司/证券主体特征：出现这些词，说明是"具体某家公司/某只证券"的内容
+COMPANY_MARKER = [
+    "财报", "业绩", "营收", "净利润", "归母", "回购", "增持", "减持", "分红", "派息",
+    "股价", "市值", "涨停", "跌停", "涨超", "跌超", "暴涨", "暴跌", "破发", "每股", "市盈率",
+    "公司", "股份", "集团", "控股", "子公司", "上市公司", "盘中", "收盘", "开盘", "证券",
+    "H股", "A股", "公告", "主板", "科创板", "创业板", "定增", "配股", "可转债", "标的",
+    "联交所", "港交所", "银行", "保险", "券商", "股份公司", "股权",
+]
+STOCK_EVENT = [
+    "财报", "业绩", "营收", "净利润", "归母", "回购", "增持", "减持", "分红", "派息", "Q1", "Q2", "Q3", "Q4",
+    "盈利", "亏损", "每股", "市盈率", "破发", "涨停", "跌停", "涨超", "跌超", "盘前", "盘后",
+    "净利", "半年报", "季报", "年报", "中报", "毛利率", "营业额", "销售额", "手续费",
+    "发行H股", "港股上市", "联交所主板", "港交所", "上市辅导", "IPO", "股权激励", "退市",
+    "earnings", "guidance", "beat", "miss", "profit", "revenue", "buyback", "split",  # 英文
+]
+
+
+def is_individual_stock(text):
+    """判定是否为需要剔除的"非白名单个股资讯"。返回 True=剔除。"""
+    t = (text or "").lower()
+    if not t:
+        return False
+    # 1) 白名单公司 → 保留
+    if any(w in t for w in KEEP_STOCK):
+        return False
+    # 2) 大盘/指数/板块/宏观层面 → 保留
+    if any(w in t for w in BOARD_MACRO):
+        return False
+    # 2.5) 证券代码（如 000630.SZ / 600519.SH / 9988.HK / 00700.HK / 000630.SZ）→ 强个股信号，剔除
+    if re.search(r"\d{4,6}\.(sz|sh|hk|ss|bj|ks|nq)", t) or re.search(r"\d{5}\.hk", t):
+        return True
+    # 3) 命中个股事件信号 且 出现公司主体特征 → 判定为具体公司个股，剔除
+    if any(w in t for w in STOCK_EVENT) and any(w in t for w in COMPANY_MARKER):
+        return True
+    return False
+
+
+def drop_individual_stock(items):
+    """对一批条目做个股过滤，返回剔除后的列表。"""
+    if not items:
+        return items
+    return [it for it in items if not is_individual_stock(str(it.get("title") or "") + " " + str(it.get("text") or ""))]
+
+
 def precompute_anomalies(market):
     """异动预计算：top_gainers/top_losers/volume_anomalies/dump_pump"""
     items = [v for v in market.values() if isinstance(v, dict) and v.get("price")]

@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3/美股内容创作者热点简报：多源并发采集（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区/DogDoing），AI合成核心热点+四要素+可直接复用的选题/推文/钩子，输出干净排版的飞书文档。"
-version: 7.33.0
+version: 7.34.0
 author: Lucas + Hermes Agent
 license: MIT
 platforms: [linux, macos]
@@ -243,6 +243,17 @@ preflight.py 并发 ping 18 源（含 6 个 DogDoing 探针），输出 ok/faile
 - **新闻/社媒**（只读 GET）：TheBlock、CoinDesk、CoinTelegraph（RSS）；东方财富、华尔街见闻；联合早报(zfinance/world)、Odaily、Google News 中文 RSS（`mainsm`，按 8 个关键词检索，会把关键词发送至 Google）；Telegram 频道（吴说/Odaily/金十/链捕手/CoinTelegraph/WhaleAlert/币安公告）；币安广场（经 `r.jina.ai` 内容读取代理）；老虎社区 `laohu8`；`DogDoing.ai`（6 端点：OI异动/恐惧贪婪/Alpha热点/广场热度/预测市场/美股）；`ai.6551.io`（crypto/AI/macro 热点）。
 - **写操作**：仅本地 `scripts/hot_history.json`（每日热点存档）与 `scripts/charts/*.png`（图表）；外部写入仅飞书（可选，`--feishu` 触发）。
 - **可选依赖（pip install）**：`requests`（核心网络）、`matplotlib`（charts.py）、`lark-oapi`（feishu_doc.py，可选）。核心管线（collect/report/preprocess/preflight/sources 全部数据读）仅用 **Python 标准库**。
+
+## 个股资讯过滤（v7.34 新增）
+
+采集/输出层统一剔除「非白名单个股资讯」：**只保留【港股互联网大厂（腾讯/阿里/美团/京东/网易/百度/小米/快手/拼多多等）】+【AI股（英伟达/台积电/AMD/博通/美光/SK海力士/英特尔/微软/苹果/谷歌/特斯拉/OpenAI/Anthropic 等大科技与存储芯片股）】** 的个股动态，其余个股（a股/美股其他/港股非互联网大厂/茅台/招行/铜陵有色等）一概不抓取。
+
+- 实现于 `scripts/preprocess.py` 的 `is_individual_stock()`/`drop_individual_stock()`，三路接入：
+  1. `collect.py` —— news/social/macro/mainsm/odaily/zaobao 统一过滤；
+  2. `report.py circle_dynamics` —— 圈内动态剔除非圈内主体的个股；
+  3. `web3-hotspot-web/server.py build_payload` —— 前端 /api/content 各板块过滤。
+- 判定：① 白名单公司任意命中 → 保留；② 大盘/指数/板块/宏观层词（纳指/标普/恒指/美联储/CPI/黄金/比特币/加密等）→ 保留；③ **证券代码**（如 000630.SZ / 600519.SH / 9988.HK）→ 剔除；④ 命中个股事件信号（财报/业绩/净利/回购/半年报/涨停/发行H股等）**且**出现公司主体特征（公司/股份/集团/控股/银行/券商/公告/联交所等）→ 剔除。
+- 不误伤：加密币种项目（比特币/以太坊/项目协议）、大盘指数、宏观数据不受影响。
 
 ## 已知限制
 
