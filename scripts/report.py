@@ -572,6 +572,13 @@ def main():
         for n in zb[:8]:
             print(f"  [zaobao] {n['published_at']} {n['title'][:88]}  {n.get('url','')}")
 
+    # 12.4b 加密要闻（Odaily 星球日报）
+    od = d.get("odaily", [])
+    if od:
+        print("## 加密要闻（Odaily 星球日报）")
+        for n in od[:10]:
+            print(f"  [odaily·{n.get('kind','')}] {n['title'][:88]}  {n.get('url','')}")
+
     # 12.5 圈内动态（按优先级+重要程度取前5；含 DogDoing Alpha 热点 + 主流媒体 mainsm）
     mainsm_items = d.get("mainsm", [])
     print()
