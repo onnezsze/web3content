@@ -203,17 +203,17 @@ def circle_dynamics(news_items, social_items, macro_items, top=5, extra_items=No
         if not _fresh(it):
             continue
         pool.append({"title": it.get("title", ""), "text": it.get("text", it.get("title", "")),
-                     "src": it.get("src", "?"), "kind": "新闻"})
+                     "src": it.get("src", "?"), "kind": "新闻", "url": it.get("url", "") or ""})
     for it in social_items:
         if not _fresh(it):
             continue
         pool.append({"title": it.get("title", it.get("text", "")), "text": it.get("text", it.get("title", "")),
-                     "src": it.get("src", it.get("channel", "?")), "kind": "社媒"})
+                     "src": it.get("src", it.get("channel", "?")), "kind": "社媒", "url": it.get("url", "") or ""})
     for it in macro_items:
         if not _fresh(it):
             continue
         pool.append({"title": it.get("title", ""), "text": it.get("text", it.get("title", "")),
-                     "src": it.get("src", "?"), "kind": "宏观"})
+                     "src": it.get("src", "?"), "kind": "宏观", "url": it.get("url", "") or ""})
     for it in (extra_items or []):
         pool.append(it)
 
@@ -285,7 +285,8 @@ def circle_dynamics(news_items, social_items, macro_items, top=5, extra_items=No
         summary = it["text"].strip()
         if not summary:
             summary = it["title"]
-        res.append({"title": it["title"][:90], "summary": summary[:150], "src": it["src"], "kind": it["kind"]})
+        res.append({"title": it["title"][:90], "summary": summary[:150], "src": it["src"], "kind": it["kind"],
+                    "url": it.get("url", "")})
     return res
 
 
@@ -639,7 +640,8 @@ def main():
         for i, it in enumerate(cd, 1):
             print(f"  {i}. {it['title']}")
             print(f"     摘要：{it['summary']}")
-            print(f"     来源：{it['src']} · {it['kind']}")
+            _u = it.get("url", "") or ""
+            print(f"     来源：{it['src']} · {it['kind']}" + (f"  {_u}" if _u else ""))
     else:
         print("  （今日无显著圈内动态）")
 

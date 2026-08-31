@@ -89,7 +89,7 @@ def _strip_paren(s):
 
 def parse_to_blocks(text):
     blocks = []
-    emoji_headers = ("🔥", "📌", "💡", "⚠️", "🎯", "📊", "🔍")
+    emoji_headers = ("🔥", "📌", "💡", "⚠️", "🎯", "📊", "🔍", "🪙", "🧭", "🌏", "🕐", "📅", "👤", "🏷")
     in_code = False
     code_lines = []
     for raw in text.splitlines():
