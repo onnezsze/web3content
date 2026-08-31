@@ -16,7 +16,7 @@ from datetime import datetime
 HOME = os.path.expanduser("~")
 BASE = os.path.dirname(os.path.abspath(__file__))
 FEISHU = "https://open.feishu.cn"
-USER = os.environ.get("FEISHU_USER_OPEN_ID", "ou_94827a21d5597e1e824de6a5e8cd11e2")
+USER = os.environ.get("FEISHU_USER_OPEN_ID", "")  # open_id 从环境变量注入，不硬编码
 # 配图顺序 + 图注
 CHARTS = [
     ("gainers.png", "图1 · 24h 涨幅榜 Top10"),
@@ -28,10 +28,17 @@ CHARTS = [
 ]
 
 def env(key):
-    for line in open(os.path.join(HOME, ".hermes", ".env")):
-        line = line.strip()
-        if line.startswith(key + "="):
-            return line.split("=", 1)[1].strip()
+    # 优先环境变量注入（推荐）；仅当缺失时才读本机 ~/.hermes/.env（本地显式配置，非代码硬编码）
+    v = os.getenv(key)
+    if v:
+        return v
+    try:
+        for line in open(os.path.join(HOME, ".hermes", ".env")):
+            line = line.strip()
+            if line.startswith(key + "="):
+                return line.split("=", 1)[1].strip()
+    except OSError:
+        pass
     return ""
 
 _APP_ID = env("FEISHU_APP_ID")

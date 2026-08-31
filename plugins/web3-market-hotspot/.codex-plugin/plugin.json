@@ -1,7 +1,7 @@
 {
   "name": "web3-market-hotspot",
-  "version": "5.0.0",
-  "description": "Web3 行情热点采集与分析：8源并发抓取+资金费率+情绪词频+昨日热点存档，10段式日报模板（市场快照/热点追踪/内容排期/合规红线），服务内容运营与KOL创作。",
+  "version": "7.32.0",
+  "description": "Web3 行情热点采集与分析：多源并发抓取(CoinGecko/OKX/Gate/RSS/东财/华尔街见闻/币安广场/DogDoing/6551/联合早报/Odaily)+资金费率+情绪词频+昨日热点存档，速览式日报模板(核心看点/要闻/热点信号/圈内动态/周度回顾)，服务内容运营与KOL创作。默认仅文本输出(零第三方依赖)，飞书写入为可选(--feishu/需显式授权)。",
   "author": {
     "name": "Lucas",
     "url": "https://github.com/onnezsze"

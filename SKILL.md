@@ -1,15 +1,19 @@
 ---
 name: web3-market-hotspot
 description: "Web3/美股内容创作者热点简报：多源并发采集（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区/DogDoing），AI合成核心热点+四要素+可直接复用的选题/推文/钩子，输出干净排版的飞书文档。"
-version: 7.31.0
+version: 7.32.0
 author: Lucas + Hermes Agent
 license: MIT
 platforms: [linux, macos]
+allowed-tools: [network, file, terminal]
+category: productivity
 binaries: ['.gitignore', 'gitignore']
 metadata:
   hermes:
     tags: [web3, crypto, market-analysis, hot-topic, content-ops, koi, creator, news-aggregation]
     binaries: ['.gitignore', 'gitignore']
+    side_effects: "需网络访问数十个只读数据源(CoinGecko/OKX/Gate/RSS/东财/华尔街见闻/币安广场/DogDoing/6551/联合早报/Odaily/GoogleNews等);写本地 scripts/hot_history.json(每日热点存档)与 scripts/charts/*.png(图表);飞书写入为可选(--feishu/需用户显式授权),默认仅文本输出。"
+    tools_notes: "网络读取依赖 requests(标准库之外需安装);图表 charts.py 依赖 matplotlib;飞书 lark_oapi(可选)。"
 ---
 
 # Web3 行情热点采集与分析
@@ -221,6 +225,15 @@ preflight.py 并发 ping 18 源（含 6 个 DogDoing 探针），输出 ok/faile
 - **scripts/tags.json**：关键词标签字典
 - **scripts/hot_history.json**：自动生成，昨日热点存档
 - **scripts/sources/dogdoing.py**：DogDoing 扩展维度采集（6 端点，fail-soft），无需配置
+
+## 错误处理
+
+- **fail-soft 降级**：每个数据源独立 try/except（18+ 并发），失败返回 `status=failed / data=[]`，**不阻断其它源**——任一源（含三非主流源 dogdoing.ai / ai.6551.io / r.jina.ai）不可用时，其它源照常采集，简报仍完整生成。
+- **20s 超时**：单源超时用部分结果继续（partial results），整体不中断。
+- **无头渲染兜底**：本机无系统 Chrome 时用 Playwright 缓存 `chrome-headless-shell` 渲染图表；CJK 字体用文泉驿正黑。
+- **飞书块限制**：`image`(27)/`table`(22)/`divider`(31) 被拒（1770001），文档用 text/heading/bullet/ordered/code/quote；需要图的场景改出 PDF/HTML 或 📷 占位 + 单独上传。
+
+> **数据外发与第三方域声明**：管线对所有数据源均为**只读 GET/抓取**，仅采集公开市场与公开新闻内容，**不上传用户数据、不写远端**；`r.jina.ai`（币安广场内容读取代理）与 `dogdoing.ai` / `ai.6551.io`（非主流第三方内容源）仅作**只读内容获取**，不含用户身份或识别信息。飞书写入（创建文档/上传图/设权限）为**可选增强**，仅在 `--feishu` 且用户显式授权时触发，默认仅输出文本。
 
 ## 已知限制
 

@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区），JSON结构化输出（异动预计算、交叉验证、情绪词频、昨日热点存档、健康检查），10段式日报模板服务内容运营与KOL创作。"
-version: 7.31.0
+version: 7.32.0
 author: Lucas Wang
 license: MIT
 platforms: [linux, macos]
@@ -165,6 +165,13 @@ python3 run.py                # 统一入口：默认输出结构化文本简报
 - **技能说明**：`SKILL.md` 含完整触发条件 / 采集 / 模板（日报·周报·创作者框架）说明，可直接作为 agent 的行为规范。
 
 ## 变更记录（Changelog）
+
+### v7.32.0 · 安全/合规降级（回应平台审核，2026-08）
+- **凭据方式**：`feishu_doc.py` 改**优先环境变量**注入（`FEISHU_APP_ID/SECRET/USER_OPEN_ID`），缺失才兜底读本地 `~/.hermes/.env`；**去掉硬编码的用户 open_id**。
+- **frontmatter 补全**：加 `allowed-tools: [network, file, terminal]`、`category: productivity`、`metadata.hermes.side_effects`（写 hot_history.json/charts PNG、需网络只读源）、`tools_notes`（依赖 requests/matplotlib/lark_oapi 可选）。
+- **新增「错误处理」章节**：fail-soft 降级 / 20s 超时 / 无头渲染兜底 / 飞书块限制；并加**数据外发与第三方域声明**（所有源只读 GET、不上传用户数据；r.jina.ai / dogdoing.ai / ai.6551.io 仅作只读内容获取）。
+- **版本统一**：把 `plugins/.codex-plugin/plugin.json` 版本 5.0.0 → 与 SKILL.md 对齐（7.32.0）。
+- 说明：所有改动均为**本地脚本/文档/配置层面**，不改变管线功能与输出的行为。
 
 ### v7.31.0 · 融合 unified-news 的 6551 热点源（2026-08）
 - 新增 `sources/hotfeed.py`：**6551 零key热点 API**（`free_hot?category=crypto/ai/macro`），带 **热度 score / 评级 grade / 交易方向 signal(long-short) / 相关币 coins / 来源 X link / 中英摘要** —— 补充当前管线缺的 **AI & 宏观分类 + 交易信号 + 相关资产标释 + X(Twitter) 热点**（可间接覆盖孙哥/CZ/Anthropic IPO/美军打击伊朗 等）。
