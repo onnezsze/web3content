@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区），JSON结构化输出（异动预计算、交叉验证、情绪词频、昨日热点存档、健康检查），10段式日报模板服务内容运营与KOL创作。"
-version: 7.30.0
+version: 7.31.0
 author: Lucas Wang
 license: MIT
 platforms: [linux, macos]
@@ -165,6 +165,11 @@ python3 run.py                # 统一入口：默认输出结构化文本简报
 - **技能说明**：`SKILL.md` 含完整触发条件 / 采集 / 模板（日报·周报·创作者框架）说明，可直接作为 agent 的行为规范。
 
 ## 变更记录（Changelog）
+
+### v7.31.0 · 融合 unified-news 的 6551 热点源（2026-08）
+- 新增 `sources/hotfeed.py`：**6551 零key热点 API**（`free_hot?category=crypto/ai/macro`），带 **热度 score / 评级 grade / 交易方向 signal(long-short) / 相关币 coins / 来源 X link / 中英摘要** —— 补充当前管线缺的 **AI & 宏观分类 + 交易信号 + 相关资产标释 + X(Twitter) 热点**（可间接覆盖孙哥/CZ/Anthropic IPO/美军打击伊朗 等）。
+- collect.py 接入 `hotfeed`（存 `out['hotfeed']`，按 cat 分类）；report.py 新增「热点信号（6551 · 交易方向/热度/相关币）」段。
+- 体现"统一新闻服务"能力：分类(Web3/AI/宏观) + 热度评分 + 相关资产 + 去重过滤(管线已有 24h/去重) + 定时推送(已有 cron)。
 
 ### v7.30.0 · 周度回顾"本周可预估热点"按日历顺序（2026-08）
 - 「下周可预估热点」改为**「本周可预估热点」**：按**日历顺序**向后排，每天列出预计发生的事件；无确定日期但可预估本周发生的**单独放"其他"**。

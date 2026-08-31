@@ -613,6 +613,18 @@ def main():
         for n in od[:10]:
             print(f"  [odaily·{n.get('kind','')}] {n['title'][:88]}  {n.get('url','')}")
 
+    # 12.4c 热点信号（6551 · 带交易方向/热度/相关币）
+    hf = d.get("hotfeed", [])
+    if hf:
+        print("## 热点信号（6551 · 交易方向/热度/相关币）")
+        for cat, label in (("crypto", "加密"), ("ai", "AI/科技"), ("macro", "宏观")):
+            items = [x for x in hf if x.get("cat") == cat]
+            items.sort(key=lambda x: x.get("score") or 0, reverse=True)
+            for it in items[:4]:
+                sig = f"[{it['signal']}]" if it.get("signal") else ""
+                coins = ",".join((it.get("coins") or [])[:6])
+                print(f"  {label}·{it.get('score')}分{sig} {it['title'][:54]}  {coins}  {it.get('link','')}")
+
     # 12.4c 主流媒体聚焦（主链媒体对名人/大佬事件的深度报道；不进圈内动态，避免旧闻占位）
     ms = d.get("mainsm", [])
     if ms:
