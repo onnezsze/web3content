@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3/美股内容创作者热点简报：多源并发采集（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区/DogDoing），AI合成核心热点+四要素+可直接复用的选题/推文/钩子，输出干净排版的飞书文档。"
-version: 7.28.0
+version: 7.29.0
 author: Lucas + Hermes Agent
 license: MIT
 platforms: [linux, macos]
@@ -129,7 +129,7 @@ preflight.py 并发 ping 18 源（含 6 个 DogDoing 探针），输出 ok/faile
   ① 监管 / 合规 / 政府动作 / 宏观市场（最高）——SEC/CFTC/央行/财政部/白宫/监管/合规/法案/听证/制裁/美联储/利率/关税/GDP/CPI/非农/美债等
   ② 主流币（BTC / ETH）相关
   ③ 美股三大指数、各大板块、MAG7、AI 公司、存储、芯片相关（标普/纳斯达克/道琼斯/NVIDIA/AI/微软/苹果/谷歌/特斯拉/台积电/芯片/存储/HBM 等）
-  同优先级再按重要程度；优先取 report.py「今日要闻候选(已带 url)」。每条要闻**必须附来源链接**。
+  同优先级再按重要程度；优先取 report.py「今日要闻候选(已带 url)」。每条要闻**统一「标题 + 链接」一个格式、不标注来源前缀**，必须附来源链接。
   · <一句话要闻> https://…
 
 🔍 圈内动态（5 条 · 仅当天最新）
