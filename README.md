@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区），JSON结构化输出（异动预计算、交叉验证、情绪词频、昨日热点存档、健康检查），10段式日报模板服务内容运营与KOL创作。"
-version: 7.32.0
+version: 7.33.0
 author: Lucas Wang
 license: MIT
 platforms: [linux, macos]
@@ -165,6 +165,11 @@ python3 run.py                # 统一入口：默认输出结构化文本简报
 - **技能说明**：`SKILL.md` 含完整触发条件 / 采集 / 模板（日报·周报·创作者框架）说明，可直接作为 agent 的行为规范。
 
 ## 变更记录（Changelog）
+
+### v7.33.0 · 补齐 7.21 审查遗留项（risk/外部清单/binaries说明/依赖声明）（2026-08）
+- frontmatter 加 **`risk: medium`**（审核要求明确声明风险等级）。
+- `binaries` 字段保留（公司 AI 平台打包校验必需），加 `binaries_note` 说明其用途，消除"非标准字段"误判。
+- 新增「**外部服务与依赖清单**」：明确列出向哪些外部端点发请求（CoinGecko/OKX/Gate、TheBlock/CoinDesk/CoinTelegraph RSS、东财/华尔街见闻、联合早报/Odaily/Google News 中文 RSS(8 关键词)/Telegram 频道/币安广场(r.jina.ai 代理)/老虎 laohu8/DogDoing.ai(6端点)/ai.6551.io），写操作仅本地 hot_history/charts；**pip 依赖**（requests/matplotlib/lark_oapi 可选）明确声明，核心管线仅 Python 标准库。
 
 ### v7.32.0 · 安全/合规降级（回应平台审核，2026-08）
 - **凭据方式**：`feishu_doc.py` 改**优先环境变量**注入（`FEISHU_APP_ID/SECRET/USER_OPEN_ID`），缺失才兜底读本地 `~/.hermes/.env`；**去掉硬编码的用户 open_id**。

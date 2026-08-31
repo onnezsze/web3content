@@ -1,17 +1,19 @@
 ---
 name: web3-market-hotspot
 description: "Web3/美股内容创作者热点简报：多源并发采集（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区/DogDoing），AI合成核心热点+四要素+可直接复用的选题/推文/钩子，输出干净排版的飞书文档。"
-version: 7.32.0
+version: 7.33.0
 author: Lucas + Hermes Agent
 license: MIT
 platforms: [linux, macos]
 allowed-tools: [network, file, terminal]
 category: productivity
+risk: medium
 binaries: ['.gitignore', 'gitignore']
 metadata:
   hermes:
     tags: [web3, crypto, market-analysis, hot-topic, content-ops, koi, creator, news-aggregation]
     binaries: ['.gitignore', 'gitignore']
+    binaries_note: "binaries 字段为公司 AI 平台打包校验所需（声明允许的二进制文件 .gitignore 等平台判为 binary），非与功能无关的误配置。"
     side_effects: "需网络访问数十个只读数据源(CoinGecko/OKX/Gate/RSS/东财/华尔街见闻/币安广场/DogDoing/6551/联合早报/Odaily/GoogleNews等);写本地 scripts/hot_history.json(每日热点存档)与 scripts/charts/*.png(图表);飞书写入为可选(--feishu/需用户显式授权),默认仅文本输出。"
     tools_notes: "网络读取依赖 requests(标准库之外需安装);图表 charts.py 依赖 matplotlib;飞书 lark_oapi(可选)。"
 ---
@@ -234,6 +236,13 @@ preflight.py 并发 ping 18 源（含 6 个 DogDoing 探针），输出 ok/faile
 - **飞书块限制**：`image`(27)/`table`(22)/`divider`(31) 被拒（1770001），文档用 text/heading/bullet/ordered/code/quote；需要图的场景改出 PDF/HTML 或 📷 占位 + 单独上传。
 
 > **数据外发与第三方域声明**：管线对所有数据源均为**只读 GET/抓取**，仅采集公开市场与公开新闻内容，**不上传用户数据、不写远端**；`r.jina.ai`（币安广场内容读取代理）与 `dogdoing.ai` / `ai.6551.io`（非主流第三方内容源）仅作**只读内容获取**，不含用户身份或识别信息。飞书写入（创建文档/上传图/设权限）为**可选增强**，仅在 `--feishu` 且用户显式授权时触发，默认仅输出文本。
+
+### 外部服务与依赖清单（主动外发说明）
+
+- **行情/资金**（只读 GET）：CoinGecko、OKX、Gate.io。
+- **新闻/社媒**（只读 GET）：TheBlock、CoinDesk、CoinTelegraph（RSS）；东方财富、华尔街见闻；联合早报(zfinance/world)、Odaily、Google News 中文 RSS（`mainsm`，按 8 个关键词检索，会把关键词发送至 Google）；Telegram 频道（吴说/Odaily/金十/链捕手/CoinTelegraph/WhaleAlert/币安公告）；币安广场（经 `r.jina.ai` 内容读取代理）；老虎社区 `laohu8`；`DogDoing.ai`（6 端点：OI异动/恐惧贪婪/Alpha热点/广场热度/预测市场/美股）；`ai.6551.io`（crypto/AI/macro 热点）。
+- **写操作**：仅本地 `scripts/hot_history.json`（每日热点存档）与 `scripts/charts/*.png`（图表）；外部写入仅飞书（可选，`--feishu` 触发）。
+- **可选依赖（pip install）**：`requests`（核心网络）、`matplotlib`（charts.py）、`lark-oapi`（feishu_doc.py，可选）。核心管线（collect/report/preprocess/preflight/sources 全部数据读）仅用 **Python 标准库**。
 
 ## 已知限制
 
