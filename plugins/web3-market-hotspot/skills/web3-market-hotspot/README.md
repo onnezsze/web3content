@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区），JSON结构化输出（异动预计算、交叉验证、情绪词频、昨日热点存档、健康检查），10段式日报模板服务内容运营与KOL创作。"
-version: 7.18.0
+version: 7.19.0
 author: Lucas Wang
 license: MIT
 platforms: [linux, macos]
@@ -165,6 +165,11 @@ python3 run.py                # 统一入口：默认输出结构化文本简报
 - **技能说明**：`SKILL.md` 含完整触发条件 / 采集 / 模板（日报·周报·创作者框架）说明，可直接作为 agent 的行为规范。
 
 ## 变更记录（Changelog）
+
+### v7.19.0 · 新增主流/综合媒体源（2026-08）
+- 新增 `sources/mainsm.py`：Google News 中文 RSS（按 孙宇晨/加密货币/比特币/加密/美股/stablecoin/meme币/区块链 关键词），补上**综合/娱乐/财经主流媒体**（联合早报/新浪/凤凰/观察者/上观/文学城/36Kr 等）对孙哥这类社会·娱乐·财经热点的报道。
+- 解决：孙宇晨·景甜事件、CZ 出面劝阻、孙宇晨道歉休战等**被主流媒体报道**的动态，此前因管线无综合媒体源而漏抓；现在命中并进新闻流（孙哥最高优先）。
+- collect.py 接入 `mainsm`，并入 news 流；fail-soft。
 
 ### v7.18.0 · 圈内动态监测扩容（2026-08）
 - 监测主体新增 **何一、徐明星**、OKX CE0/Star Xu；事件信号词新增 **转发/转推/评论/推文/tweet/retweet/repost/发推/互动/表态/站队**。
