@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3 行情热点采集与分析：多源并发抓取（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区），JSON结构化输出（异动预计算、交叉验证、情绪词频、昨日热点存档、健康检查），10段式日报模板服务内容运营与KOL创作。"
-version: 7.16.0
+version: 7.17.0
 author: Lucas Wang
 license: MIT
 platforms: [linux, macos]
@@ -165,6 +165,11 @@ python3 run.py                # 统一入口：默认输出结构化文本简报
 - **技能说明**：`SKILL.md` 含完整触发条件 / 采集 / 模板（日报·周报·创作者框架）说明，可直接作为 agent 的行为规范。
 
 ## 变更记录（Changelog）
+
+### v7.17.0 · 新增「今日热门资产」+ 全市场热门源（2026-08）
+- 新增数据源 `sources/hot_assets.py`：CoinGecko 全市场 **成交量榜 + 24h 涨幅榜**（per_page=150），承接此前被主流 37 币榜漏掉的 **牛来/PONS/UNI** 等链上/新上/高出量交易型热点。
+- collect.py 接入 `hot_assets`；report.py 新增「今日热门资产」输出段（代码/名称/价格/24h/成交额/市值/标签，过滤稳定币，优先涨幅+量能）。
+- SKILL.md 模板新增「🪙 今日热门资产（交易承接）」档。
 
 ### v7.16.0 · Slack/Claude 统一入口 + 定时示例（2026-08）
 - 新增 **`run.py` 统一入口**：默认只输出文本简报（Claude/Slack 直接消费，零第三方依赖）；`--feishu` 才走飞书文档，`--preflight` 源健康检查 —— 避免 agent 误触飞书路径。

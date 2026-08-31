@@ -438,7 +438,22 @@ def main():
             print(f"{sym}: ${v['price']:,.0f} | 1h {v.get('chg_1h','?'):+.2f}% | 24h {v.get('chg_24h','?'):+.2f}% | 7d {v.get('chg_7d','?'):+.2f}% | vol ${v.get('vol',0)/1e9:.1f}B")
     print()
 
-    # 3. 资金费率
+    # 3. 今日热门资产（全市场成交量/24h 涨幅榜，承接 牛来/PONS/UNI 类交易热点）
+    ha = d.get("hot_assets", [])
+    if ha:
+        skip = {"USDT", "USDC", "USD1", "USDE", "DAI", "FDUSD", "TUSD", "PYUSD", "BUSD"}
+        picks = [a for a in ha if (a.get("symbol") or "") not in skip]
+        picks.sort(key=lambda a: (a.get("chg_24h") if isinstance(a.get("chg_24h"), (int, float)) else -99), reverse=True)
+        picks = picks[:6]
+        print("## 今日热门资产（全市场成交量/24h 涨幅榜，含链上/新上标的）")
+        for a in picks:
+            c = a.get("chg_24h")
+            cs = f"{c:+.2f}%" if isinstance(c, (int, float)) else "?"
+            tag = "/".join(a.get("tags") or [])
+            print(f"  {str(a['symbol']):<8}{str(a['name']):<16} 24h {cs}  vol ${(a.get('vol') or 0)/1e6:.0f}M  mcap ${(a.get('mcap') or 0)/1e9:.2f}B  [{tag}]")
+        print()
+
+    # 4. 资金费率
     f = d.get("funding", {})
     if f:
         print("## 资金费率（来源: OKX）")

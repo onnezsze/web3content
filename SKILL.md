@@ -1,7 +1,7 @@
 ---
 name: web3-market-hotspot
 description: "Web3/美股内容创作者热点简报：多源并发采集（CoinGecko/Gate/OKX资金费率/RSS/东财/华尔街见闻/TG/币安广场/老虎社区/DogDoing），AI合成核心热点+四要素+可直接复用的选题/推文/钩子，输出干净排版的飞书文档。"
-version: 7.16.0
+version: 7.17.0
 author: Lucas + Hermes Agent
 license: MIT
 platforms: [linux, macos]
@@ -123,6 +123,11 @@ preflight.py 并发 ping 18 源（含 6 个 DogDoing 探针），输出 ok/faile
    · 原声：1 条社区/网友原声
    · 角度：2–3 个钩子/矛盾点 + 偏多/偏空/待确认
   #2 … #5 …
+
+🪙 今日热门资产（交易承接 · 3–6 条）
+  承接 牛来/PONS/UNI 这类 链上/新上/高出量 交易型热点：取自 report.py 的「今日热门资产」（全市场成交量 + 24h 涨幅榜），每条含 代码/名称/价格/24h/成交额/市值/标签（成交量TOP·24h领涨）。
+  用途：直播/短视频"热门资产"选题 + 平台交易用户的承接素材。过滤掉稳定币后，优先 24h 涨幅为正且成交量大的标的。
+  · <代码> <名称> 24h <涨跌> vol <成交额> mcap <市值> [标签]
 
 📌 今日要闻（最多 5 条，每条 1 句话 + 附来源链接，去噪）
   优先级（从高到低）：
