@@ -21,7 +21,7 @@ class TelegramChannels(Source):
                     blocks = re.findall(
                         r'<div class="tgme_widget_message text_not_supported_wrap js-widget_message".*?(?=<div class="tgme_widget_message text_not_supported_wrap js-widget_message"|$)',
                         raw, re.S)
-                    for b in blocks[:3]:
+                    for b in blocks[:20]:
                         text = re.search(r'class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>', b, re.S)
                         date = re.search(r'datetime="([^"]+)"', b)
                         t = html.unescape(re.sub(r"<[^>]+>", " ", text.group(1))).strip() if text else ""
@@ -57,7 +57,7 @@ class JinaSquare(Source):
                 if t and k not in seen and len(t) > 15:
                     seen.add(k)
                     out.append({"channel": "binance_square", "text": t[:280], "time": ""})
-                if len(out) >= 10:
+                if len(out) >= 100:
                     break
             if out:
                 return self.ok(out)
@@ -83,7 +83,7 @@ class Laohu(Source):
                 if t and k not in seen and len(t) > 5:
                     seen.add(k)
                     out.append({"channel": "laohu", "text": t[:280], "time": ""})
-                if len(out) >= 10:
+                if len(out) >= 100:
                     break
             if out:
                 return self.ok(out)

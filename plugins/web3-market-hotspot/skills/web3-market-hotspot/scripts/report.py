@@ -139,7 +139,7 @@ def build_data_cards(market, funding, news_items, precomputed):
     return cards[:12]
 
 
-def top_news(news_items, top=5):
+def top_news(news_items, top=100):
     """今日要闻候选，按优先级排序：①监管/合规/政府动作/宏观市场(最高) ②主流币(BTC/ETH) ③美股指数·板块·MAG7·AI·存储·芯片。
     返回按优先级+重要程度(交叉验证/标题长度)排序的 top 条。"""
     T1 = ["监管", "合规", "sec", "cftc", "央行", "财政部", "白宫", "政府", "法案", "听证", "制裁", "起诉",
@@ -165,7 +165,7 @@ def top_news(news_items, top=5):
     return ranked[:top]
 
 
-def circle_dynamics(news_items, social_items, macro_items, top=5, extra_items=None):
+def circle_dynamics(news_items, social_items, macro_items, top=100, extra_items=None):
     """圈内动态(2026-08 扩版)：监测 孙哥(孙宇晨,含八卦·最高优先) / 特朗普(加密相关) / 交易所 / 交易所老板高管 /
     币圈大V·名人(动态/八卦/言论/活动) / 链·生态。命中监测主体即可入选(不限于加密关键词)，
     用于抓名人八卦、老板言论、活动传闻；extra_items 可传入 DogDoing Alpha 热点等额外源。

@@ -41,7 +41,7 @@ class WSCNLive(Source):
             items = data.get("data", {}).get("items", [])
             if not items:
                 items = data.get("data", [])
-            for it in (items or [])[:20]:
+            for it in (items or [])[:100]:
                 text = it.get("content") or it.get("title") or ""
                 if text:
                     out.append({

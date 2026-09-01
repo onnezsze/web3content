@@ -28,7 +28,7 @@ class Zaobao(Source):
                 pub = (f"{m.group(1)[:4]}-{m.group(1)[4:6]}-{m.group(1)[6:]}" if m else "")
                 out.append({"title": t[:200], "src": "zaobao", "published_at": pub,
                             "text": t, "url": BASE + href})
-            return self.ok(out[:20])
+            return self.ok(out[:100])
         except Exception as e:
             return self.fail(str(e)[:120])
 

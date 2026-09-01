@@ -18,7 +18,7 @@ class HotFeed(Source):
             try:
                 raw = self.http_json(f"https://ai.6551.io/open/free_hot?category={c}", timeout=12)
                 items = (raw.get("news") or {}).get("items") or []
-                for it in items[:15]:
+                for it in items[:100]:
                     title = (it.get("title") or "").strip()
                     if not title:
                         continue
