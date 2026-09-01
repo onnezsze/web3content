@@ -134,6 +134,8 @@ def build_output(market_r, news_r, social_r, macro_r, social_status, funding_r, 
     mainsm_items = preprocess.drop_individual_stock(mainsm_items)
     odaily_items = preprocess.drop_individual_stock(odaily_items)
     zaobao_items = preprocess.drop_individual_stock(zaobao_items)
+    # v7.34 媒体板块主题过滤：只保留 美股+加密 相关内容，剔除债市/汽车/地产/机场等无关财经
+    zaobao_items = preprocess.filter_media_topic(zaobao_items)
     anomalies = preprocess.precompute_anomalies(market)
 
     # 情绪词频（基于社媒原文）

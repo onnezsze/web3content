@@ -4,7 +4,7 @@
 fail-soft。
 """
 from .base import Source
-import re, html
+import re, html, datetime, time
 
 
 class WSCNNews(Source):
@@ -26,11 +26,19 @@ class WSCNNews(Source):
                 uri = it.get("uri") or ""
                 if not uri and it.get("id"):
                     uri = "https://wallstreetcn.com/livenews/" + str(it.get("id"))
+                # 发布时间：把 UNIX 时间戳/数字统一转成 ISO 字符串，确保前端能显示
+                pub = it.get("display_time", "") or it.get("created_at", "") or ""
+                if pub and str(pub).isdigit():
+                    try:
+                        # 用 UTC 时间格式化(系统时区无关), 前端 fmtCardTime 再 +8 转北京时间
+                        pub = datetime.datetime.utcfromtimestamp(int(pub)).strftime("%Y-%m-%dT%H:%M:%S")
+                    except Exception:
+                        pub = ""
                 out.append({
                     "title": title[:200], "src": "华尔街见闻",
                     "text": title,
                     "url": uri,
-                    "published_at": it.get("display_time", "") or "",
+                    "published_at": pub,
                 })
             if out:
                 return self.ok(out[:100])

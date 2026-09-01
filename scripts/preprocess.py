@@ -210,6 +210,59 @@ def drop_individual_stock(items):
     return [it for it in items if not is_individual_stock(str(it.get("title") or "") + " " + str(it.get("text") or ""))]
 
 
+# =============================================================================
+# 媒体板块主题过滤(v7.34)：只保留【美股 + 加密】相关内容，剔除 债市/汽车/地产/机场/宏观政策 等无关财经
+# =============================================================================
+US_STOCK_KW = [
+    "美股", "纳指", "纳斯达克", "标普500", "道指", "道琼斯", "美联储", "鲍威尔", "降息", "加息",
+    "利率决议", "非农", "cpi", "通胀", "美债", "美国国债", "华尔街", "美股三大", "us stocks", "fed",
+    "nvidia", "英伟达", "tsla", "特斯拉", "aapl", "苹果", "msft", "微软", "googl", "谷歌", "alphabet",
+    "amzn", "亚马逊", "meta", "脸书", "netflix", "奈飞", "amd", "intel", "英特尔", "qualcomm", "高通",
+    "broadcom", "博通", "oracle", "甲骨文", "openai", "anthropic", "sam altman", "gpt", "ai", "人工智能",
+    "台积电", "tsmc", "存储芯片", "hbm",
+    # 美股科技/互联网大厂(财报/股价/高管动向)
+    "纳斯达克指数", "标普指数", "道琼斯指数", "微软", "谷歌母公司",
+]
+CRYPTO_KW = [
+    "比特币", "btc", "bitcoin", "以太坊", "eth", "ethereum", "索拉纳", "solana", "sol", "加密", "crypto",
+    "币安", "binance", "okx", "欧易", "coinbase", "xrp", "doge", "狗狗币", "代币", "token", "稳定币",
+    "stablecoin", "usdt", "usdc", "交易所", "上币", "下架", "tron", "波场", "trx", "web3", "defi", "nft",
+    "meme", "数字资产", "链上", "质押", "挖矿", "矿业",
+    "空投", "airdrop", "etf", "加密货币", "altcoin", "山寨币", "鲸鱼", "巨鲸", "爆仓", "合约交易",
+]
+
+
+def is_media_relevant(text):
+    """媒体板块判定：命中【美股】或【加密】关键词则 True(保留)；命中强排除词则直接剔除。"""
+    t = (text or "").lower()
+    if not t:
+        return False
+    # 强排除：商品期货/大宗商品/债市/地产/军事/汽车/机场 等明显无关财经(即使含美股等词)
+    if any(w in t for w in MEDIA_BLOCK):
+        return False
+    return any(w in t for w in US_STOCK_KW) or any(w in t for w in CRYPTO_KW)
+
+
+# 媒体板块强排除词：命中即剔除(优先级高于白名单)
+MEDIA_BLOCK = [
+    "商品期货", "国内期货", "期货收盘", "沪铜", "沪铝", "沪镍", "原油期货", "甲醇", "乙二醇", "螺纹",
+    "焦煤", "铁矿石", "农产品", "生猪", "豆粕", "白糖", "纯碱", "沥青", "瓶片",
+    "国债期货", "国债收盘", "央行", "mlf", "lpr", "社融", "m2", "广义货币", "逆回购",
+    "地产", "房地产", "楼市", "房价", "土拍", "国土", "土地", "安置房", "棚改",
+    "车企", "比亚迪", "长城汽车", "吉利汽车", "小鹏", "理想汽车", "蔚来", "问界", "小米su7",
+    "机场", "航空", "航班", "赴美", "出入境", "免签", "签证",
+    "军事", "中导", "导弹", "雷达", "军委", "国防", "军队", "舰队", "航母",
+]
+
+
+def filter_media_topic(items):
+    """媒体板块只保留 美股+加密 相关内容，返回剔除后的列表。"""
+    if not items:
+        return items
+    return [it for it in items
+            if is_media_relevant(str(it.get("title") or "") + " " + str(it.get("text") or "") + " " + str(it.get("tags") or ""))]
+
+
 def precompute_anomalies(market):
     """异动预计算：top_gainers/top_losers/volume_anomalies/dump_pump"""
     items = [v for v in market.values() if isinstance(v, dict) and v.get("price")]
