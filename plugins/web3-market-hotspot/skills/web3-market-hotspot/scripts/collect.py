@@ -25,6 +25,8 @@ from sources.mainsm import fetch_mainsm_chain
 from sources.zaobao import fetch_zaobao_chain
 from sources.odaily import fetch_odaily_chain
 from sources.hotfeed import fetch_hotfeed_chain
+from sources.wscn_news import fetch_wscn_news_chain
+from sources.wscn_calendar import fetch_wscn_calendar_chain
 import preprocess
 import hot_history
 
@@ -53,9 +55,11 @@ def run_all():
         f_zaobao = ex.submit(fetch_zaobao_chain)
         f_odaily = ex.submit(fetch_odaily_chain)
         f_hotfeed = ex.submit(fetch_hotfeed_chain)
+        f_wscnnews = ex.submit(fetch_wscn_news_chain)
+        f_wscncal = ex.submit(fetch_wscn_calendar_chain)
 
         try:
-            market_r, news_r, social_r, macro_r, funding_r, dogdoing_r, hotassets_r, mainsm_r, zaobao_r, odaily_r, hotfeed_r = (
+            market_r, news_r, social_r, macro_r, funding_r, dogdoing_r, hotassets_r, mainsm_r, zaobao_r, odaily_r, hotfeed_r, wscnnews_r, wscncal_r = (
                 f_market.result(timeout=20),
                 f_news.result(timeout=20),
                 f_social.result(timeout=20),
@@ -67,6 +71,8 @@ def run_all():
                 f_zaobao.result(timeout=20),
                 f_odaily.result(timeout=20),
                 f_hotfeed.result(timeout=20),
+                f_wscnnews.result(timeout=20),
+                f_wscncal.result(timeout=20),
             )
         except concurrent.futures.TimeoutError:
             log("!! 20s timeout, using partial results")
@@ -81,6 +87,8 @@ def run_all():
             zaobao_r = {"status": "timeout", "data": []}
             odaily_r = {"status": "timeout", "data": []}
             hotfeed_r = {"status": "timeout", "data": []}
+            wscnnews_r = {"status": "timeout", "data": []}
+            wscncal_r = {"status": "timeout", "data": []}
 
     # social 链返回 (result, per-source status) 或直接 result
     if isinstance(social_r, tuple):
@@ -96,19 +104,24 @@ def run_all():
     log(f"funding: {funding_r['status']}")
     log(f"dogdoing: {dogdoing_r['status']} ({len(dogdoing_r.get('data', {}))} blocks)")
 
-    return market_r, news_r, social_result, macro_r, social_status, funding_r, dogdoing_r, hotassets_r, mainsm_r, zaobao_r, odaily_r, hotfeed_r
+    return market_r, news_r, social_result, macro_r, social_status, funding_r, dogdoing_r, hotassets_r, mainsm_r, zaobao_r, odaily_r, hotfeed_r, wscnnews_r, wscncal_r
 
 
-def build_output(market_r, news_r, social_r, macro_r, social_status, funding_r, dogdoing_r, hotassets_r, mainsm_r, zaobao_r, odaily_r, hotfeed_r):
+def build_output(market_r, news_r, social_r, macro_r, social_status, funding_r, dogdoing_r, hotassets_r, mainsm_r, zaobao_r, odaily_r, hotfeed_r, wscnnews_r, wscncal_r):
     market = market_r.get("data", {})
     news_items = news_r.get("data", [])
     mainsm_items = mainsm_r.get("data", [])
     zaobao_items = zaobao_r.get("data", [])
+    # 华尔街见闻-资讯并入「媒体(zaobao)」板块
+    wscn_items = wscnnews_r.get("data", [])
+    if wscn_items:
+        zaobao_items = (zaobao_items or []) + wscn_items
     odaily_items = odaily_r.get("data", [])
     social_items = social_r.get("data", [])
     macro_items = macro_r.get("data", [])
     funding = funding_r.get("data", {})
     hot_assets = hotassets_r.get("data", [])
+    calendar_items = wscncal_r.get("data", [])
 
     # 预处理
     news_clean, news_archived = preprocess.filter_and_dedup(news_items)
@@ -166,6 +179,7 @@ def build_output(market_r, news_r, social_r, macro_r, social_status, funding_r, 
         "hot_assets": hot_assets,
         "mainsm": mainsm_items,
         "zaobao": zaobao_items,
+        "calendar": calendar_items,
         "odaily": odaily_items,
         "hotfeed": hotfeed_r.get("data", []),
     }
@@ -201,8 +215,8 @@ def main():
         return
 
     t0 = time.time()
-    market_r, news_r, social_r, macro_r, social_status, funding_r, dogdoing_r, hotassets_r, mainsm_r, zaobao_r, odaily_r, hotfeed_r = run_all()
-    out = build_output(market_r, news_r, social_r, macro_r, social_status, funding_r, dogdoing_r, hotassets_r, mainsm_r, zaobao_r, odaily_r, hotfeed_r)
+    market_r, news_r, social_r, macro_r, social_status, funding_r, dogdoing_r, hotassets_r, mainsm_r, zaobao_r, odaily_r, hotfeed_r, wscnnews_r, wscncal_r = run_all()
+    out = build_output(market_r, news_r, social_r, macro_r, social_status, funding_r, dogdoing_r, hotassets_r, mainsm_r, zaobao_r, odaily_r, hotfeed_r, wscnnews_r, wscncal_r)
 
     if not args.json_only:
         # stderr 人类可读摘要
