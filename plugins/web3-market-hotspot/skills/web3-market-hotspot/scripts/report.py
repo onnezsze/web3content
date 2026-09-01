@@ -172,18 +172,14 @@ def circle_dynamics(news_items, social_items, macro_items, top=100, extra_items=
     按优先级(孙哥>特朗普>交易所>老板高管>币圈大V>链/生态)+重要程度筛选，返回 top 条。"""
     CIRCLE_ENTITY = {
         "孙哥/孙宇晨": ["孙宇晨", "孙哥", "孙割", "justin sun", "波场", "tron", "htx", "火币", "trx"],
-        "交易所老板高管": ["cz", "赵长鹏", "何一", "徐明星", "brian armstrong", "richard teng", "coinbase ceo",
-                         "binance ceo", "okx ceo", "star xu", "创始人", "高管", "董事长", "孙宇晨"],
-        "币圈大V/名人": ["arthur hayes", "vitalik", "v神", "马斯克", "musk", "cz", "孙宇晨", "何一", "徐明星",
-                        "分析师", "大佬",
-                        "巨鲸", "whale", "喊单", "kelly", "crypto daily", "bankless", "coin bureau", "gabor",
-                        "唐小僧", "凉兮", "梭教授"],
-        "特朗普/监管": ["特朗普", "trump", "美财", "财政部", "制裁", "sec", "监管", "白宫", "参议院", "灰度",
-                       "world liberty", "worldliberty"],
-        "交易所": ["binance", "币安", "okx", "欧易", "coinbase", "交易所", "上币", "上架", "下架", "暂停交易",
-                  "上市", "现货", "合约", "bybit", "bitget", "gate", "kucoin", "htx", "火币"],
-        "链/生态": ["主网", "mainnet", "layer2", "l2", "base", "arbitrum", "solana", "ethereum", "以太坊",
-                   "生态", "tvl", "链上", "安全事件", "漏洞", "升级", "空投", "回购", "发起"],
+        "交易所老板高管": ["cz", "赵长鹏", "何一", "徐明星", "coinbase ceo", "okx ceo", "binance ceo",
+                         "star xu", "创始人", "高管", "董事长", "孙宇晨"],
+        "币圈名人/KOL": ["arthur hayes", "vitalik", "v神", "马斯克", "musk", "cz", "孙宇晨", "何一",
+                        "徐明星", "a16z", "coin bureau", "bankless", "crypto daily", "gabor", "唐小僧",
+                        "凉兮", "梭教授", "喊单"],
+        "加密交易所": ["binance", "币安", "okx", "欧易", "coinbase", "交易所", "上币", "上架", "下架",
+                      "暂停交易", "上市", "现货", "合约", "bybit", "bitget", "gate", "kucoin", "htx",
+                      "火币", "kraken", "bitfinex", "crypto.com", "gemini", "bittrex", "deribit"],
     }
     # 动态/八卦/言论/活动 信号词：命中监测主体时加分，用于抓名人八卦、老板言论、活动/传闻
     EVENT_KW = ["绯闻", "恋爱", "婚", "分手", "传闻", "被曝", "辟谣", "回应", "热搜", "爆料", "官宣", "宣布",
@@ -233,8 +229,7 @@ def circle_dynamics(news_items, social_items, macro_items, top=100, extra_items=
             s += sum(1 for k in EVENT_KW if k.lower() in t)
         return s
 
-    PRIORITY = {"孙哥/孙宇晨": 1, "特朗普/监管": 2, "交易所": 3, "交易所老板高管": 4,
-                "币圈大V/名人": 5, "链/生态": 6}
+    PRIORITY = {"孙哥/孙宇晨": 1, "加密交易所": 2, "交易所老板高管": 3, "币圈名人/KOL": 4}
 
     def priority(it):
         t = (it["title"] + " " + it["text"]).lower()
@@ -265,10 +260,10 @@ def circle_dynamics(news_items, social_items, macro_items, top=100, extra_items=
         t = (it["title"] + " " + it["text"]).lower()
         return any(k in t for k in NEW_EVENT_KW)
     cand = [it for it in pool
-            if it["score"] >= 2 and (_entity_hit((it["title"] + " " + it["text"]).lower())
-                                     or any(k in (it["title"] + " " + it["text"]).lower() for k in CRYPTO_KW))
+            if it["score"] >= 2
+            and _entity_hit((it["title"] + " " + it["text"]).lower())
             and _new_event(it)]
-    # v7.34 个股过滤：圈内动态只保留 真·圈内主体(孙哥/特朗普/交易所/老板高管/币圈大V/链生态)，
+    # v7.34 个股过滤：圈内动态只保留 真·圈内主体(孙哥/孙宇晨/加密交易所/交易所老板高管/币圈名人·KOL)，
     # 剔除 铜陵有色/贵州茅台 等非圈内主体的个股资讯(命中非白名单个股信号即剔除)
     cand = [it for it in cand if not is_individual_stock(it["title"] + " " + it["text"])]
     # 按优先级(小=高)再按重要程度(score 降序)排序
