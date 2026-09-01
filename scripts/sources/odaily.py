@@ -26,7 +26,7 @@ class Odaily(Source):
                 kind = "快讯" if "/newsflash/" in href else "深度"
                 out.append({"title": t[:200], "src": "odaily", "published_at": "",
                             "text": t, "url": BASE + href, "kind": kind})
-            return self.ok(out[:25])
+            return self.ok(out[:100])
         except Exception as e:
             return self.fail(str(e)[:120])
 

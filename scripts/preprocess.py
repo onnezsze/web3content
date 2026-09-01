@@ -134,7 +134,7 @@ def filter_and_dedup(items, hours=24):
             kept.append(e)
 
     kept.sort(key=lambda x: x["published_at"], reverse=True)
-    return kept[:30], archived[:20]
+    return kept[:100], archived[:100]
 
 
 # =============================================================================

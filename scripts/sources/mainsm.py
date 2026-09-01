@@ -51,7 +51,7 @@ class MainStream(Source):
                 seen.add(k)
                 dedup.append(it)
             out = dedup
-        return self.ok(out[:40])
+        return self.ok(out[:100])
 
 
 def fetch_mainsm_chain():

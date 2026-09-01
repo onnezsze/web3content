@@ -43,7 +43,7 @@ class HotAssets(Source):
                     o = dict(r)
                     o["tags"] = [t for t, l in (("VOL", vol_top), ("GAIN", gain_top)) if r in l]
                     out.append(o)
-            return self.ok(out[:16])
+            return self.ok(out[:100])
         except Exception as e:
             return self.fail(str(e)[:120])
 
